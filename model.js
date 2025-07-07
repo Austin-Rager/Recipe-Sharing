@@ -63,9 +63,10 @@ const RecipeSchema = new mongoose.Schema({
     },
 });
 
-mongoose.connect(
-    "mongodb+srv://austin_rager:ISs1pWApPN9uAjfI@recipesharing.aezbg1q.mongodb.net/?retryWrites=true&w=majority&appName=recipesharing"
-);
+mongoose.connect(process.env.MONGODB_URI)
+.then(() => console.log('Connected to MongoDB'))
+.catch(err => console.error('MongoDB connection error:', err));
+
 
 const Recipe = mongoose.model("Recipe", RecipeSchema);
 const Account = mongoose.model("Account", AccountSchema);
