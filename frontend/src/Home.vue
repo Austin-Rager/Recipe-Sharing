@@ -1,186 +1,412 @@
 <template>
-  <div class="liked-page">
-    <div class="page-header">
-      <h1>❤️ My Liked Recipes</h1>
-      <p v-if="likedRecipes.length > 0">You have {{ likedRecipes.length }} liked recipes</p>
-      <p v-else>No liked recipes yet.</p>
-    </div>
-
-    <!-- search and filters -->
-    <div class="liked-controls" v-if="likedRecipes.length > 0">
-      <div class="search-section">
-        <div class="search-bar">
-          <input 
-            type="text" 
-            placeholder="Search your liked recipes..." 
-            v-model="searchQuery"
-          />
-          <span class="search-icon">🔍</span>
-        </div>
-      </div>
-
-      <!-- quick filters -->
-      <div class="quick-filters">
-        <button 
-          class="filter-btn" 
-          :class="{ active: selectedDifficulty === '' }"
-          @click="selectedDifficulty = ''"
-        >
-          All
-        </button>
-        <button 
-          class="filter-btn"
-          :class="{ active: selectedDifficulty === 'Easy' }"
-          @click="selectedDifficulty = 'Easy'"
-        >
-          Easy
-        </button>
-        <button 
-          class="filter-btn"
-          :class="{ active: selectedDifficulty === 'Med' }"
-          @click="selectedDifficulty = 'Med'"
-        >
-          Med
-        </button>
-        <button 
-          class="filter-btn"
-          :class="{ active: selectedDifficulty === 'Hard' }"
-          @click="selectedDifficulty = 'Hard'"
-        >
-          Hard
-        </button>
-      </div>
-    </div>
-
-    <!-- no liked recipes -->
-    <div class="empty-state" v-if="likedRecipes.length === 0">
-      <div class="empty-icon">💔</div>
-      <h2>No liked recipes yet</h2>
-      <p>Start exploring recipes!</p>
-      <button class="explore-btn" @click="goToHome">
-        Explore Recipes
-      </button>
-    </div>
-
-    <!-- liked recipes grid -->
-    <div class="liked-recipes-grid" v-if="filteredLikedRecipes.length > 0">
-      <div 
-        v-for="recipe in filteredLikedRecipes" 
-        :key="recipe.id"
-        class="recipe-card"
-        @click="openRecipe(recipe)"
-      >
-        <div class="card-image">
-          <img :src="recipe.image" :alt="recipe.title" />
-          <button 
-            class="like-btn liked"
-            @click.stop="toggleLike(recipe)"
-          >
-            ❤️
+  <div class="home-page">
+    <!-- nav -->
+    <nav class="navbar">
+      <div class="nav-content">
+        <h1 class="logo">🍳 FlavorCraft</h1>
+        <div class="nav-actions">
+          <div class="search-bar">
+            <input
+              type="text"
+              placeholder="Search recipes..."
+              v-model="searchQuery"
+              @input="handleSearch"
+            />
+            <span class="search-icon">🔍</span>
+          </div>
+          <button class="nav-btn filters-btn" @click="toggleFilters">
+            Filters
+          </button>
+          <button class="nav-btn saver-btn" @click="showSaved = !showSaved">
+            {{ showSaved ? 'All Recipes' : 'Saver' }}
+          </button>
+          <button class="nav-btn liked-btn" @click="showLiked = !showLiked">
+            My All Liked
           </button>
         </div>
-        <div class="card-content">
-          <h3>{{ recipe.title }}</h3>
-          <div class="card-meta">
-            <div class="rating">
-              <span class="stars">{{ '★'.repeat(Math.floor(recipe.rating)) }}{{ '☆'.repeat(5 - Math.floor(recipe.rating)) }}</span>
-              <span class="rating-count">({{ recipe.reviewCount }})</span>
+      </div>
+    </nav>
+
+    <div class="main-content">
+      <!-- left side stuff-->
+      <div class="recipes-section">
+        <!--recipe of the day-->
+        <div class="recipe-of-the-day" v-if="recipeOfDay">
+          <h2>Recipe of the Day 🌟</h2>
+          <div class="featured-card" @click="openRecipe(recipeOfDay)">
+            <img :src="recipeOfDay.image" :alt="recipeOfDay.title">
+            <div class="featured-content">
+              <h3>{{ recipeOfDay.title }}</h3>
+              <p>{{ recipeOfDay.description }}</p>
+              <div class="featured-meta">
+                <div class="rating">
+                  <span class="stars">{{ '★'.repeat(Math.floor(recipeOfDay.rating))}} {{ '☆'.repeat(5 - Math.floor(recipeOfDay.rating)) }}</span>
+                  <span> {{ recipeOfDay.reviewCount }}</span>
+                </div>
+                <span class="cook-time">⏱️ {{ recipeOfDay.cookTime }}min</span>
+              </div>
             </div>
-            <span class="difficulty" :class="`difficulty-${recipe.difficulty.toLowerCase()}`">
-              {{ recipe.difficulty }}
-            </span>
           </div>
-          <div class="recipe-stats">
-            <span class="cook-time">⏱️ {{ recipe.cookTime }}min</span>
-            <span class="liked-date">Liked {{ formatLikedDate(recipe.likedAt) }}</span>
+        </div>
+
+        <!--trending part-->
+        <div class="trending-section">
+          <h2>🔥 Trending</h2>
+          <div class="trending-cards">
+            <div
+              v-for="trending in trendingRecipes"
+              :key="trending.id"
+              class="trending-card"
+              @click="openRecipe(trending)"
+            >
+              <img :src="trending.image" :alt="trending.title">
+              <div class="trending-content">
+                <h4>{{ trending.title }}</h4>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!--recipe grid-->
+        <div class="recipes-grid">
+          <div
+            v-for="recipe in filteredRecipes"
+            :key="recipe.id"
+            class="recipe-card"
+            @click="openRecipe(recipe)"
+          >
+            <div class="card-image">
+              <img :src="recipe.image" :alt="recipe.title" />
+              <button
+                class="like-btn"
+                :class="{ liked: recipe.isLiked }"
+                @click.stop="toggleLike(recipe)"
+              >
+                {{ recipe.isLiked ? '❤️' : '🤍' }}
+              </button>
+            </div>
+            <div class="card-content">
+              <h3>{{ recipe.title }}</h3>
+              <div class="card-meta">
+                <div class="rating">
+                  <span class="stars">{{ '★'.repeat(Math.floor(recipe.rating)) }}{{ '☆'.repeat(5 - Math.floor(recipe.rating)) }}</span>
+                  <span class="rating-count">({{ recipe.reviewCount }})</span>
+                </div>
+                <span class="difficulty" :class="`difficulty-${recipe.difficulty.toLowerCase()}`">
+                  {{ recipe.difficulty }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- no results -->
-    <div class="no-results" v-if="likedRecipes.length > 0 && filteredLikedRecipes.length === 0">
-      <div class="no-results-icon">🔍</div>
-      <h3>No recipes found</h3>
-      <p>Try Again</p>
-      <button class="clear-filters-btn" @click="clearFilters">
-        Clear Filters
-      </button>
+       <!--right side, filters and stuff-->
+       <div class="sidebar" :class="{open: showFilters}">
+        <div class="filters-panel">
+          <h3>Filters</h3>
+            <!--difficulty filter-->
+          <div class="filter-group">
+            <h4>Difficulty</h4>
+            <div class="filter-option">
+               <label v-for="level in ['Easy', 'Med', 'Hard']" :key="level">
+                <input
+                  type="checkbox"
+                  :value="level"
+                  v-model="selectedDifficulties"
+                  @change="applyFilters"
+                />
+                {{ level }}
+              </label>
+            </div>
+       </div>
+       <!--rating filter-->
+          <div class="filter-group">
+            <h4>Rating</h4>
+            <div class="rating-filter">
+              <div v-for="rating in [5,4,3,2,1]" :key="rating" class="rating-option">
+                <input 
+                  type="radio" 
+                  :value="rating" 
+                  v-model="minRating"
+                  @change="applyFilters"
+                  name="rating"
+                />
+                <span class="stars">{{ '★'.repeat(rating) }}{{ '☆'.repeat(5-rating) }}</span>
+                <span>& up</span>
+              </div>
+            </div>
+          </div>
+        <!--cook time filter-->
+        <div class="filter-group">
+          <h4>Cook Time</h4>
+          <select v-model="maxCookTime" @change="applyFilters">
+            <option value="">Any time</option>
+            <option value="15">Under 15 min</option>
+            <option value="30">Under 30 min</option>
+            <option value="60">Under 1 hour</option>
+          </select> 
+        </div>
+
+        <button class="clear-filters" @click="clearFilters">
+          Clear Filters
+        </button>
+      </div>
+
     </div>
-  </div>
+      </div>
+    </div>
 </template>
 
-<script>
+<script setup>
+import { ref, computed, onMounted } from 'vue';
 
-/* RECIPE SAVIOUR - PROFESSIONAL HOME PAGE STYLES */
-/* Industry-ready design with modern aesthetics */
+// reactive data - update page when it changes 
+const searchQuery = ref('')
+const showFilters = ref(false) 
+const showLiked = ref(false) 
+const selectedDifficulties = ref([]) // check boxes difficulty
+const minRating = ref('') 
+const maxCookTime = ref('') 
 
-/* CSS Variables for consistent theming */
-:root {
-  /* Primary Brand Colors */
-  --primary-color: #ff6b6b;
-  --primary-hover: #ff5252;
-  --primary-light: #ffe6e6;
-  
-  /* Neutral Colors */
-  --text-primary: #2c3e50;
-  --text-secondary: #5a6c7d;
-  --text-muted: #8492a6;
-  --background-primary: #ffffff;
-  --background-secondary: #f8fafc;
-  --background-tertiary: #e2e8f0;
-  
-  /* Status Colors */
-  --success-color: #10b981;
-  --warning-color: #f59e0b;
-  --danger-color: #ef4444;
-  
-  /* Difficulty Badge Colors */
-  --easy-bg: #d1fae5;
-  --easy-text: #065f46;
-  --medium-bg: #fef3c7;
-  --medium-text: #92400e;
-  --hard-bg: #fee2e2;
-  --hard-text: #991b1b;
-  
-  /* Shadows & Effects */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  
-  /* Border Radius */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-2xl: 20px;
-  --radius-full: 9999px;
-  
-  /* Spacing Scale */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-  --space-12: 3rem;
-  --space-16: 4rem;
-  
-  /* Typography */
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg: 1.125rem;
-  --font-size-xl: 1.25rem;
-  --font-size-2xl: 1.5rem;
-  --font-size-3xl: 1.875rem;
-  
-  /* Transitions */
-  --transition-fast: 150ms ease-in-out;
-  --transition-normal: 250ms ease-in-out;
-  --transition-slow: 350ms ease-in-out;
+// sample recipe data CHANGE!!!!!!!
+const recipes = ref([
+ {
+   id: 1,
+   title: "creamy garlic pasta",
+   description: "a rich and creamy pasta dish with roasted garlic and fresh herbs",
+   image: "https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?w=400",
+   rating: 4.8,
+   reviewCount: 245,
+   cookTime: 25,
+   difficulty: "easy",
+   isLiked: false
+ },
+ {
+   id: 2,
+   title: "chocolate chip cookies",
+   description: "classic homemade cookies that everyone loves",
+   image: "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?w=300",
+   rating: 4.6,
+   reviewCount: 189,
+   cookTime: 20,
+   difficulty: "easy",
+   isLiked: false
+ },
+ {
+   id: 3,
+   title: "beef bourguignon",
+   description: "french classic slow-cooked beef in red wine sauce",
+   image: "https://images.unsplash.com/photo-1574484284002-952d92456975?w=300",
+   rating: 4.9,
+   reviewCount: 156,
+   cookTime: 180,
+   difficulty: "hard",
+   isLiked: true
+ },
+ {
+   id: 4,
+   title: "caesar salad",
+   description: "fresh romaine with homemade dressing",
+   image: "https://images.unsplash.com/photo-1546793665-c74683f339c1?w=300",
+   rating: 4.3,
+   reviewCount: 98,
+   cookTime: 15,
+   difficulty: "easy",
+   isLiked: false
+ },
+ {
+   id: 5,
+   title: "salmon teriyaki",
+   description: "grilled salmon with sweet and savory teriyaki glaze",
+   image: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=300",
+   rating: 4.7,
+   reviewCount: 203,
+   cookTime: 30,
+   difficulty: "med",
+   isLiked: true
+ },
+ {
+   id: 6,
+   title: "vegetable stir fry",
+   description: "quick and healthy vegetable medley",
+   image: "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=300",
+   rating: 3.2,
+   reviewCount: 124,
+   cookTime: 12,
+   difficulty: "easy",
+   isLiked: false
+ },
+ {
+   id: 7,
+   title: "lobster thermidor",
+   description: "luxurious lobster in creamy brandy sauce",
+   image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=300",
+   rating: 5.0,
+   reviewCount: 87,
+   cookTime: 45,
+   difficulty: "hard",
+   isLiked: false
+ },
+ {
+   id: 8,
+   title: "homemade pizza margherita",
+   description: "wood-fired style pizza with fresh basil and mozzarella",
+   image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=300",
+   rating: 4.4,
+   reviewCount: 312,
+   cookTime: 35,
+   difficulty: "med",
+   isLiked: true
+ }
+])
+
+//radom selected 
+const recipeOfDay = ref(null)
+
+
+const trendingRecipes = ref([
+ {
+   id: 9,
+   title: "air fryer wings",
+   image: "https://images.unsplash.com/photo-1527477396000-e27163b481c2?w=200"
+ },
+ {
+   id: 10,
+   title: "banana bread",
+   image: "https://images.unsplash.com/photo-1586444248902-2f64eddc13df?w=200"
+ }
+])
+
+
+// filter recipes 4= stars
+const highRatedRecipes = computed(() => {
+ return recipes.value.filter(recipe => recipe.rating >= 4.0)
+})
+
+
+const filteredRecipes = computed(() => {
+ let filtered = recipes.value.filter(recipe => recipe.id !== recipeOfDay.value?.id)
+ if (searchQuery.value) {
+   filtered = filtered.filter(recipe => 
+     recipe.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+     recipe.description.toLowerCase().includes(searchQuery.value.toLowerCase())
+   )
+ }
+
+//filters 
+
+ if (showLiked.value) {
+   filtered = filtered.filter(recipe => recipe.isLiked)
+ }
+
+ if (selectedDifficulties.value.length > 0) {
+   filtered = filtered.filter(recipe => 
+     selectedDifficulties.value.includes(recipe.difficulty)
+   )
+ }
+
+ if (minRating.value) {
+   filtered = filtered.filter(recipe => recipe.rating >= minRating.value)
+ }
+
+ if (maxCookTime.value) {
+   filtered = filtered.filter(recipe => recipe.cookTime <= parseInt(maxCookTime.value))
+ }
+
+ return filtered
+})
+
+//rndom pick
+function selectRandomRecipeOfDay() {
+ const eligibleRecipes = highRatedRecipes.value
+ if (eligibleRecipes.length > 0) {
+   const randomIndex = Math.floor(Math.random() * eligibleRecipes.length)
+   recipeOfDay.value = { ...eligibleRecipes[randomIndex] }
+   console.log(`selected recipe of the day: ${recipeOfDay.value.title} (${recipeOfDay.value.rating})`)
+ }
 }
+
+
+function toggleFilters() {
+ showFilters.value = !showFilters.value
+}
+
+
+function handleSearch() {
+}
+
+function applyFilters() {
+
+}
+
+function clearFilters() {
+ selectedDifficulties.value = []
+ minRating.value = ''
+ maxCookTime.value = ''
+ searchQuery.value = ''
+}
+
+// toggle like/unlike 
+function toggleLike(recipe) {
+ recipe.isLiked = !recipe.isLiked
+ //TO DO: SAVE TO BACKEND API
+ console.log(`${recipe.isLiked ? 'liked' : 'unliked'} recipe: ${recipe.title}`)
+}
+
+
+function openRecipe(recipe) {
+ alert(`opening recipe: ${recipe.title}`)
+ // TO DO: USE ROUTER TO NAVIGATE
+}
+
+//check if refresh needed
+function shouldRefreshRecipeOfDay() {
+ const today = new Date().toDateString()
+ const lastRefresh = localStorage.getItem('lastRecipeOfDayRefresh')
+ return !lastRefresh || lastRefresh !== today
+}
+
+//save date
+function updateLastRefreshDate() {
+ const today = new Date().toDateString()
+ localStorage.setItem('lastRecipeOfDayRefresh', today)
+}
+
+
+onMounted(() => {
+ console.log('home page loaded')
+ 
+ if (shouldRefreshRecipeOfDay()) {
+   selectRandomRecipeOfDay()
+   updateLastRefreshDate()
+ } else {
+   const savedRecipeOfDay = localStorage.getItem('currentRecipeOfDay')
+   if (savedRecipeOfDay) {
+     const savedRecipe = JSON.parse(savedRecipeOfDay)
+    //makes sure still exists
+     const existingRecipe = recipes.value.find(r => r.id === savedRecipe.id && r.rating >= 4.0)
+     if (existingRecipe) {
+       recipeOfDay.value = existingRecipe
+     } else {
+       selectRandomRecipeOfDay()
+       updateLastRefreshDate()
+     }
+   } else {
+     selectRandomRecipeOfDay()
+     updateLastRefreshDate()
+   }
+ }
+ 
+ // save recipe of the day
+ if (recipeOfDay.value) {
+   localStorage.setItem('currentRecipeOfDay', JSON.stringify(recipeOfDay.value))
+ }
+})
+</script>
+
+<style>
+
 
 /* Reset and Base Styles */
 * {
@@ -830,5 +1056,5 @@ body {
     --primary-color: #0066cc;
   }
 }
+</style>
 
-</script>
