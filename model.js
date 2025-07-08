@@ -19,6 +19,16 @@ const AccountSchema = new mongoose.Schema({
         type:String,
         required:[true, "User needs a password"],
     },
+    likedRecipes: [{
+        recipeId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Recipe'
+        },
+        likedAt: {
+            type: Date,
+            default: Date.now
+        }
+    }]
 });
 
 const RecipeSchema = new mongoose.Schema({
@@ -61,6 +71,22 @@ const RecipeSchema = new mongoose.Schema({
         type:Number,
         required:false,
     },
+    creator:{
+        type: String,
+        required:true
+    },
+    instructions:[{
+            Steps:{
+                type:String,
+                required:true,
+            },
+        }],
+
+    likes:{
+        type: Number,
+        required:false,
+        default: 0,
+    }
 });
 
 mongoose.connect(process.env.MONGODB_URI)
