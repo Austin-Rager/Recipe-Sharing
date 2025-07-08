@@ -1,175 +1,196 @@
+
 <template>
   <div class="home-page">
-    <!-- nav -->
     <nav class="navbar">
-      <div class="nav-content">
-        <h1 class="logo">🍳 FlavorCraft</h1>
-        <div class="nav-actions">
-          <div class="search-bar">
-            <input
-              type="text"
-              placeholder="Search recipes..."
-              v-model="searchQuery"
-              @input="handleSearch"
-            />
-            <span class="search-icon">🔍</span>
-          </div>
-          <button class="nav-btn filters-btn" @click="toggleFilters">
-            Filters
-          </button>
-          <button class="nav-btn saver-btn" @click="showSaved = !showSaved">
-            {{ showSaved ? 'All Recipes' : 'Saver' }}
-          </button>
-          <button class="nav-btn liked-btn" @click="showLiked = !showLiked">
-            My All Liked
-          </button>
-        </div>
-      </div>
-    </nav>
-
-    <div class="main-content">
-      <!-- left side stuff-->
-      <div class="recipes-section">
-        <!--recipe of the day-->
-        <div class="recipe-of-the-day" v-if="recipeOfDay">
-          <h2>Recipe of the Day 🌟</h2>
-          <div class="featured-card" @click="openRecipe(recipeOfDay)">
-            <img :src="recipeOfDay.image" :alt="recipeOfDay.title">
-            <div class="featured-content">
-              <h3>{{ recipeOfDay.title }}</h3>
-              <p>{{ recipeOfDay.description }}</p>
-              <div class="featured-meta">
-                <div class="rating">
-                  <span class="stars">{{ '★'.repeat(Math.floor(recipeOfDay.rating))}} {{ '☆'.repeat(5 - Math.floor(recipeOfDay.rating)) }}</span>
-                  <span> {{ recipeOfDay.reviewCount }}</span>
-                </div>
-                <span class="cook-time">⏱️ {{ recipeOfDay.cookTime }}min</span>
-              </div>
+        <div class="nav-content">
+          <h1 class="logo">🍳 FlavorCraft</h1>
+          
+          <div class="nav-center">
+            <div class="search-bar">
+              <input
+                type="text"
+                placeholder="Search recipes..."
+                v-model="searchQuery"
+                @input="handleSearch"
+              />
+              <span class="search-icon">🔍</span>
             </div>
           </div>
-        </div>
-
-        <!--trending part-->
-        <div class="trending-section">
-          <h2>🔥 Trending</h2>
-          <div class="trending-cards">
-            <div
-              v-for="trending in trendingRecipes"
-              :key="trending.id"
-              class="trending-card"
-              @click="openRecipe(trending)"
-            >
-              <img :src="trending.image" :alt="trending.title">
-              <div class="trending-content">
-                <h4>{{ trending.title }}</h4>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!--recipe grid-->
-        <div class="recipes-grid">
-          <div
-            v-for="recipe in filteredRecipes"
-            :key="recipe.id"
-            class="recipe-card"
-            @click="openRecipe(recipe)"
-          >
-            <div class="card-image">
-              <img :src="recipe.image" :alt="recipe.title" />
-              <button
-                class="like-btn"
-                :class="{ liked: recipe.isLiked }"
-                @click.stop="toggleLike(recipe)"
-              >
-                {{ recipe.isLiked ? '❤️' : '🤍' }}
+          
+          <div class="nav-actions">
+            <div class="nav-buttons">
+              <button class="nav-btn home-btn" @click="goToHome">
+                Home
+              </button>
+              <button class="nav-btn liked-btn" @click="showLiked = !showLiked">
+                My Liked
+              </button>
+              <button class="nav-btn create-btn" @click="goToCreateRecipe">
+                Create Recipe
               </button>
             </div>
-            <div class="card-content">
-              <h3>{{ recipe.title }}</h3>
-              <div class="card-meta">
-                <div class="rating">
-                  <span class="stars">{{ '★'.repeat(Math.floor(recipe.rating)) }}{{ '☆'.repeat(5 - Math.floor(recipe.rating)) }}</span>
-                  <span class="rating-count">({{ recipe.reviewCount }})</span>
+
+            <div class="profile-section" v-if="currentUser">
+              <div class="profile-menu" @click="toggleProfileMenu">
+                <div class="profile-avatar">
+                  <span class="profile-icon">👤</span>
                 </div>
-                <span class="difficulty" :class="`difficulty-${recipe.difficulty.toLowerCase()}`">
-                  {{ recipe.difficulty }}
-                </span>
+                <span class="profile-name">{{ currentUser.name || 'User' }}</span>
+                <span class="dropdown-arrow">▼</span>
+              </div>
+
+              <div class="profile-dropdown" v-if="showProfileMenu">
+                <div class="profile-dropdown-header">
+                  <div class="profile-avatar-large">
+                    <span class="profile-icon-large">👤</span>
+                  </div>
+                  <div class="profile-info">
+                    <h4>{{ currentUser.name || 'User' }}</h4>
+                    <p>{{ currentUser.email || 'user@example.com' }}</p>
+                  </div>
+                </div>
+                <div class="profile-dropdown-menu">
+                  <button class="dropdown-item" @click="goToProfile">
+                    My Profile
+                  </button>
+                  <button class="dropdown-item" @click="goToLikedRecipes">
+                    Liked Recipes
+                  </button>
+                  <button class="dropdown-item" @click="goToMyRecipes">
+                    My Recipes
+                  </button>
+                  <div class="dropdown-divider"></div>
+                  <button class="dropdown-item logout" @click="logout">
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="profile-loading">
+              <div class="loading-spinner">⟳</div>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+
+    <LikedPage v-if="showLiked" @go-home="goToHome" />
+  
+    <div v-else>
+      <div class="main-content">
+        <div class="recipes-section">
+
+          <div class="recipes-grid">
+            <div
+              v-for="recipe in filteredRecipes"
+              :key="recipe.id"
+              class="recipe-card"
+              @click="openRecipe(recipe)"
+            >
+              <div class="card-image">
+                <img :src="recipe.image" :alt="recipe.title" />
+                <button
+                  class="like-btn"
+                  :class="{ liked: recipe.isLiked }"
+                  @click.stop="toggleLike(recipe)"
+                >
+                  {{ recipe.isLiked ? '❤️' : '🤍' }}
+                </button>
+              </div>
+              <div class="card-content">
+                <h3>{{ recipe.title }}</h3>
+                <div class="card-meta">
+                  <div class="rating">
+                    <span class="stars">{{ '★'.repeat(Math.floor(recipe.rating)) }}{{ '☆'.repeat(5 - Math.floor(recipe.rating)) }}</span>
+                    <span class="rating-count">({{ recipe.reviewCount }})</span>
+                  </div>
+                  <span class="difficulty" :class="`difficulty-${recipe.difficulty.toLowerCase()}`">
+                    {{ recipe.difficulty }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
-       <!--right side, filters and stuff-->
-       <div class="sidebar" :class="{open: showFilters}">
-        <div class="filters-panel">
-          <h3>Filters</h3>
-            <!--difficulty filter-->
-          <div class="filter-group">
-            <h4>Difficulty</h4>
-            <div class="filter-option">
-               <label v-for="level in ['Easy', 'Med', 'Hard']" :key="level">
-                <input
-                  type="checkbox"
-                  :value="level"
-                  v-model="selectedDifficulties"
-                  @change="applyFilters"
-                />
-                {{ level }}
-              </label>
-            </div>
-       </div>
-       <!--rating filter-->
-          <div class="filter-group">
-            <h4>Rating</h4>
-            <div class="rating-filter">
-              <div v-for="rating in [5,4,3,2,1]" :key="rating" class="rating-option">
-                <input 
-                  type="radio" 
-                  :value="rating" 
-                  v-model="minRating"
-                  @change="applyFilters"
-                  name="rating"
-                />
-                <span class="stars">{{ '★'.repeat(rating) }}{{ '☆'.repeat(5-rating) }}</span>
-                <span>& up</span>
+        
+        <div class="sidebar" :class="{open: showFilters}">
+          <div class="filters-panel">
+            <h3>Filters</h3>
+            
+            <div class="filter-group">
+              <h4>Difficulty</h4>
+              <div class="filter-option">
+                <label v-for="level in ['Easy', 'Med', 'Hard']" :key="level">
+                  <input
+                    type="checkbox"
+                    :value="level"
+                    v-model="selectedDifficulties"
+                    @change="applyFilters"
+                  />
+                  {{ level }}
+                </label>
               </div>
             </div>
+
+     
+            <div class="filter-group">
+              <h4>Rating</h4>
+              <div class="rating-filter">
+                <div v-for="rating in [5,4,3,2,1]" :key="rating" class="rating-option">
+                  <input 
+                    type="radio" 
+                    :value="rating" 
+                    v-model="minRating"
+                    @change="applyFilters"
+                    name="rating"
+                  />
+                  <span class="stars">{{ '★'.repeat(rating) }}{{ '☆'.repeat(5-rating) }}</span>
+                  <span>& up</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="filter-group">
+              <h4>Cook Time</h4>
+              <select v-model="maxCookTime" @change="applyFilters">
+                <option value="">Any time</option>
+                <option value="15">Under 15 min</option>
+                <option value="30">Under 30 min</option>
+                <option value="60">Under 1 hour</option>
+              </select> 
+            </div>
+
+            <button class="clear-filters" @click="clearFilters">
+              Clear Filters
+            </button>
           </div>
-        <!--cook time filter-->
-        <div class="filter-group">
-          <h4>Cook Time</h4>
-          <select v-model="maxCookTime" @change="applyFilters">
-            <option value="">Any time</option>
-            <option value="15">Under 15 min</option>
-            <option value="30">Under 30 min</option>
-            <option value="60">Under 1 hour</option>
-          </select> 
         </div>
-
-        <button class="clear-filters" @click="clearFilters">
-          Clear Filters
-        </button>
-      </div>
-
-    </div>
       </div>
     </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import LikedPage from './components/LikedPage.vue';
 
-// reactive data - update page when it changes 
 const searchQuery = ref('')
 const showFilters = ref(false) 
 const showLiked = ref(false) 
-const selectedDifficulties = ref([]) // check boxes difficulty
+const selectedDifficulties = ref([])
 const minRating = ref('') 
 const maxCookTime = ref('') 
 
-// sample recipe data CHANGE!!!!!!!
+const showProfileMenu = ref(false)
+const currentUser = ref({
+  name: 'Julia Souza',
+  email: 'julia@flavorcraft.com'
+})
+
+
+
+// SAMPLE DATA!! - Updated with title case difficulties
 const recipes = ref([
  {
    id: 1,
@@ -179,7 +200,7 @@ const recipes = ref([
    rating: 4.8,
    reviewCount: 245,
    cookTime: 25,
-   difficulty: "easy",
+   difficulty: "Easy", // Changed from "easy"
    isLiked: false
  },
  {
@@ -190,7 +211,7 @@ const recipes = ref([
    rating: 4.6,
    reviewCount: 189,
    cookTime: 20,
-   difficulty: "easy",
+   difficulty: "Easy", // Changed from "easy"
    isLiked: false
  },
  {
@@ -201,7 +222,7 @@ const recipes = ref([
    rating: 4.9,
    reviewCount: 156,
    cookTime: 180,
-   difficulty: "hard",
+   difficulty: "Hard", // Changed from "hard"
    isLiked: true
  },
  {
@@ -212,7 +233,7 @@ const recipes = ref([
    rating: 4.3,
    reviewCount: 98,
    cookTime: 15,
-   difficulty: "easy",
+   difficulty: "Easy", // Changed from "easy"
    isLiked: false
  },
  {
@@ -223,7 +244,7 @@ const recipes = ref([
    rating: 4.7,
    reviewCount: 203,
    cookTime: 30,
-   difficulty: "med",
+   difficulty: "Med", // Changed from "med"
    isLiked: true
  },
  {
@@ -234,7 +255,7 @@ const recipes = ref([
    rating: 3.2,
    reviewCount: 124,
    cookTime: 12,
-   difficulty: "easy",
+   difficulty: "Easy", // Changed from "easy"
    isLiked: false
  },
  {
@@ -245,7 +266,7 @@ const recipes = ref([
    rating: 5.0,
    reviewCount: 87,
    cookTime: 45,
-   difficulty: "hard",
+   difficulty: "Hard", // Changed from "hard"
    isLiked: false
  },
  {
@@ -256,37 +277,14 @@ const recipes = ref([
    rating: 4.4,
    reviewCount: 312,
    cookTime: 35,
-   difficulty: "med",
+   difficulty: "Med", // Changed from "med"
    isLiked: true
  }
 ])
 
-//radom selected 
-const recipeOfDay = ref(null)
-
-
-const trendingRecipes = ref([
- {
-   id: 9,
-   title: "air fryer wings",
-   image: "https://images.unsplash.com/photo-1527477396000-e27163b481c2?w=200"
- },
- {
-   id: 10,
-   title: "banana bread",
-   image: "https://images.unsplash.com/photo-1586444248902-2f64eddc13df?w=200"
- }
-])
-
-
-// filter recipes 4= stars
-const highRatedRecipes = computed(() => {
- return recipes.value.filter(recipe => recipe.rating >= 4.0)
-})
-
-
 const filteredRecipes = computed(() => {
- let filtered = recipes.value.filter(recipe => recipe.id !== recipeOfDay.value?.id)
+ let filtered = recipes.value
+
  if (searchQuery.value) {
    filtered = filtered.filter(recipe => 
      recipe.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
@@ -294,11 +292,6 @@ const filteredRecipes = computed(() => {
    )
  }
 
-//filters 
-
- if (showLiked.value) {
-   filtered = filtered.filter(recipe => recipe.isLiked)
- }
 
  if (selectedDifficulties.value.length > 0) {
    filtered = filtered.filter(recipe => 
@@ -317,27 +310,12 @@ const filteredRecipes = computed(() => {
  return filtered
 })
 
-//rndom pick
-function selectRandomRecipeOfDay() {
- const eligibleRecipes = highRatedRecipes.value
- if (eligibleRecipes.length > 0) {
-   const randomIndex = Math.floor(Math.random() * eligibleRecipes.length)
-   recipeOfDay.value = { ...eligibleRecipes[randomIndex] }
-   console.log(`selected recipe of the day: ${recipeOfDay.value.title} (${recipeOfDay.value.rating})`)
- }
-}
-
-
-function toggleFilters() {
- showFilters.value = !showFilters.value
-}
-
-
 function handleSearch() {
+  // Search is handled reactively by the computed property
 }
 
 function applyFilters() {
-
+  // Filters are applied reactively by the computed property
 }
 
 function clearFilters() {
@@ -347,67 +325,91 @@ function clearFilters() {
  searchQuery.value = ''
 }
 
-// toggle like/unlike 
 function toggleLike(recipe) {
  recipe.isLiked = !recipe.isLiked
- //TO DO: SAVE TO BACKEND API
+ 
+ // Save to localStorage for LikedPage component
+ const likedRecipes = recipes.value.filter(r => r.isLiked).map(r => ({
+   ...r,
+   likedAt: new Date().toISOString()
+ }))
+ localStorage.setItem('likedRecipes', JSON.stringify(likedRecipes))
+ 
  console.log(`${recipe.isLiked ? 'liked' : 'unliked'} recipe: ${recipe.title}`)
 }
 
-
 function openRecipe(recipe) {
  alert(`opening recipe: ${recipe.title}`)
- // TO DO: USE ROUTER TO NAVIGATE
 }
 
-//check if refresh needed
-function shouldRefreshRecipeOfDay() {
- const today = new Date().toDateString()
- const lastRefresh = localStorage.getItem('lastRecipeOfDayRefresh')
- return !lastRefresh || lastRefresh !== today
+function goToHome() {
+ window.scrollTo({ top: 0, behavior: 'smooth' })
+ showLiked.value = false
+ clearFilters() // Clear filters when going home
+ console.log('going to home page')
 }
 
-//save date
-function updateLastRefreshDate() {
- const today = new Date().toDateString()
- localStorage.setItem('lastRecipeOfDayRefresh', today)
+function goToCreateRecipe() {
+ alert('create recipe page - backend not ready yet!')
+ console.log('going to create recipe page')
 }
 
+function toggleProfileMenu() {
+ showProfileMenu.value = !showProfileMenu.value
+}
+
+function goToProfile() {
+ showProfileMenu.value = false
+ alert('profile page - backend not ready yet!')
+ console.log('going to profile page')
+}
+
+function goToLikedRecipes() {
+ showProfileMenu.value = false
+ showLiked.value = true
+ window.scrollTo({ top: 0, behavior: 'smooth' })
+ console.log('showing liked recipes')
+}
+
+function goToMyRecipes() {
+ showProfileMenu.value = false
+ alert('my recipes page - backend not ready yet!')
+ console.log('going to my recipes page')
+}
+
+function goToSettings() {
+ showProfileMenu.value = false
+ alert('settings page - backend not ready yet!')
+ console.log('going to settings page')
+}
+
+function logout() {
+ showProfileMenu.value = false
+ 
+ if (confirm('are you sure you want to logout?')) {
+   alert('logout functionality - backend not ready yet!')
+   console.log('logging out...')
+ }
+}
+
+function handleClickOutside(event) {
+ const profileSection = document.querySelector('.profile-section')
+ if (profileSection && !profileSection.contains(event.target)) {
+   showProfileMenu.value = false
+ }
+}
 
 onMounted(() => {
  console.log('home page loaded')
- 
- if (shouldRefreshRecipeOfDay()) {
-   selectRandomRecipeOfDay()
-   updateLastRefreshDate()
- } else {
-   const savedRecipeOfDay = localStorage.getItem('currentRecipeOfDay')
-   if (savedRecipeOfDay) {
-     const savedRecipe = JSON.parse(savedRecipeOfDay)
-    //makes sure still exists
-     const existingRecipe = recipes.value.find(r => r.id === savedRecipe.id && r.rating >= 4.0)
-     if (existingRecipe) {
-       recipeOfDay.value = existingRecipe
-     } else {
-       selectRandomRecipeOfDay()
-       updateLastRefreshDate()
-     }
-   } else {
-     selectRandomRecipeOfDay()
-     updateLastRefreshDate()
-   }
- }
- 
- // save recipe of the day
- if (recipeOfDay.value) {
-   localStorage.setItem('currentRecipeOfDay', JSON.stringify(recipeOfDay.value))
- }
+ document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+ document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
 <style>
-
-
 /* Reset and Base Styles */
 * {
   box-sizing: border-box;
@@ -421,7 +423,6 @@ body {
   color: var(--text-primary);
   background-color: var(--background-secondary);
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Main Container */
@@ -430,47 +431,40 @@ body {
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
 }
 
-/* NAVIGATION STYLES */
-.navbar {
-  background: var(--background-primary);
-  border-bottom: 1px solid var(--background-tertiary);
-  box-shadow: var(--shadow-sm);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.95);
-}
-
+/* ===== NAVIGATION STYLES ===== */
 .nav-content {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: var(--space-4) var(--space-6);
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
+  gap: var(--space-8);
 }
 
 .logo {
   font-size: var(--font-size-2xl);
   font-weight: 700;
   color: var(--primary-color);
-  margin: 0;
   letter-spacing: -0.025em;
   display: flex;
   align-items: center;
   gap: var(--space-2);
 }
 
-.nav-actions {
+/* Search Bar */
+.nav-center {
   display: flex;
-  align-items: center;
-  gap: var(--space-4);
+  justify-content: center;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 .search-bar {
   position: relative;
-  min-width: 300px;
+  width: 100%;
+  max-width: 400px;
 }
 
 .search-bar input {
@@ -478,15 +472,16 @@ body {
   padding: var(--space-3) var(--space-12) var(--space-3) var(--space-4);
   border: 2px solid var(--background-tertiary);
   border-radius: var(--radius-full);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   background: var(--background-primary);
-  transition: all var(--transition-fast);
   outline: none;
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-fast);
 }
 
 .search-bar input:focus {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+  box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.1);
 }
 
 .search-bar input::placeholder {
@@ -502,31 +497,168 @@ body {
   font-size: var(--font-size-lg);
 }
 
+/* Navigation Actions */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
 .nav-btn {
   padding: var(--space-3) var(--space-6);
-  border: 2px solid var(--primary-color);
-  background: transparent;
-  color: var(--primary-color);
+  border: 2px solid transparent;
+  background: var(--background-secondary);
+  color: var(--text-primary);
   border-radius: var(--radius-full);
   font-weight: 600;
   font-size: var(--font-size-sm);
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
   transition: all var(--transition-fast);
-  white-space: nowrap;
 }
 
 .nav-btn:hover {
   background: var(--primary-color);
   color: white;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
-.nav-btn:active {
-  transform: translateY(0);
+.home-btn,
+.liked-btn {
+  background: var(--primary-color);
+  color: white;
 }
 
-/* MAIN CONTENT LAYOUT */
+.create-btn {
+  background: var(--success-color);
+  color: white;
+}
+
+/* ===== PROFILE SECTION ===== */
+.profile-section {
+  position: relative;
+  margin-left: var(--space-4);
+}
+
+.profile-menu {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  background: var(--background-primary);
+  border: 2px solid var(--background-tertiary);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+
+.profile-menu:hover {
+  background: var(--background-secondary);
+  border-color: var(--primary-color);
+}
+
+.profile-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: var(--font-size-base);
+}
+
+.profile-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.dropdown-arrow {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  transition: transform var(--transition-fast);
+}
+
+.profile-menu:hover .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+/* Profile Dropdown */
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  background: var(--background-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--background-tertiary);
+  min-width: 280px;
+  z-index: 1000;
+}
+
+.profile-dropdown-header {
+  padding: var(--space-6);
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.profile-avatar-large {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.profile-info h4 {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin-bottom: var(--space-1);
+}
+
+.profile-info p {
+  font-size: var(--font-size-sm);
+  opacity: 0.9;
+}
+
+.dropdown-item {
+  width: 100%;
+  padding: var(--space-3) var(--space-6);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  transition: background-color var(--transition-fast);
+}
+
+.dropdown-item:hover {
+  background: var(--background-secondary);
+}
+
+.dropdown-item.logout {
+  color: var(--danger-color);
+}
+
+/* ===== MAIN CONTENT LAYOUT ===== */
 .main-content {
   max-width: 1200px;
   margin: 0 auto;
@@ -534,7 +666,6 @@ body {
   display: grid;
   grid-template-columns: 1fr 320px;
   gap: var(--space-8);
-  align-items: start;
 }
 
 .recipes-section {
@@ -543,8 +674,9 @@ body {
   gap: var(--space-8);
 }
 
-/* RECIPE OF THE DAY STYLES */
-.recipe-of-day h2 {
+/* ===== RECIPE CARDS ===== */
+.recipe-of-day h2,
+.trending-section h2 {
   font-size: var(--font-size-3xl);
   font-weight: 700;
   color: var(--text-primary);
@@ -557,19 +689,17 @@ body {
 .featured-card {
   background: var(--background-primary);
   border-radius: var(--radius-2xl);
-  overflow: hidden;
   box-shadow: var(--shadow-xl);
   cursor: pointer;
-  transition: all var(--transition-normal);
   display: grid;
   grid-template-columns: 280px 1fr;
   min-height: 200px;
   border: 1px solid var(--background-tertiary);
+  transition: transform var(--transition-normal);
 }
 
 .featured-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
 }
 
 .featured-card img {
@@ -589,16 +719,12 @@ body {
 .featured-content h3 {
   font-size: var(--font-size-xl);
   font-weight: 600;
-  color: var(--text-primary);
   margin-bottom: var(--space-3);
-  line-height: 1.3;
 }
 
 .featured-content p {
   color: var(--text-secondary);
   margin-bottom: var(--space-6);
-  font-size: var(--font-size-base);
-  line-height: 1.5;
 }
 
 .featured-meta {
@@ -628,17 +754,7 @@ body {
   gap: var(--space-1);
 }
 
-/* TRENDING SECTION STYLES */
-.trending-section h2 {
-  font-size: var(--font-size-3xl);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: var(--space-6);
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
+/* Trending Cards */
 .trending-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -648,16 +764,14 @@ body {
 .trending-card {
   background: var(--background-primary);
   border-radius: var(--radius-xl);
-  overflow: hidden;
   cursor: pointer;
-  transition: all var(--transition-normal);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--background-tertiary);
+  transition: transform var(--transition-normal);
 }
 
 .trending-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
 }
 
 .trending-card img {
@@ -675,10 +789,9 @@ body {
   font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0;
 }
 
-/* RECIPE GRID STYLES */
+/* Recipe Grid */
 .recipes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -688,16 +801,14 @@ body {
 .recipe-card {
   background: var(--background-primary);
   border-radius: var(--radius-xl);
-  overflow: hidden;
   cursor: pointer;
-  transition: all var(--transition-normal);
   box-shadow: var(--shadow-md);
   border: 1px solid var(--background-tertiary);
+  transition: transform var(--transition-normal);
 }
 
 .recipe-card:hover {
   transform: translateY(-6px);
-  box-shadow: var(--shadow-xl);
 }
 
 .card-image {
@@ -711,11 +822,6 @@ body {
   height: 100%;
   object-fit: cover;
   background: linear-gradient(45deg, #f0f4f8, #d6e1ea);
-  transition: transform var(--transition-slow);
-}
-
-.recipe-card:hover .card-image img {
-  transform: scale(1.05);
 }
 
 .like-btn {
@@ -729,18 +835,15 @@ body {
   height: 44px;
   cursor: pointer;
   font-size: var(--font-size-lg);
-  transition: all var(--transition-fast);
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(10px);
   box-shadow: var(--shadow-md);
+  transition: transform var(--transition-fast);
 }
 
 .like-btn:hover {
-  background: white;
   transform: scale(1.1);
-  box-shadow: var(--shadow-lg);
 }
 
 .like-btn.liked {
@@ -755,9 +858,7 @@ body {
 .card-content h3 {
   font-size: var(--font-size-lg);
   font-weight: 600;
-  color: var(--text-primary);
   margin-bottom: var(--space-3);
-  line-height: 1.3;
 }
 
 .card-meta {
@@ -767,19 +868,12 @@ body {
   margin-bottom: var(--space-4);
 }
 
-.rating-count {
-  color: var(--text-muted);
-  font-size: var(--font-size-xs);
-  margin-left: var(--space-1);
-}
-
 .difficulty {
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.025em;
 }
 
 .difficulty-easy {
@@ -797,7 +891,7 @@ body {
   color: var(--hard-text);
 }
 
-/* SIDEBAR STYLES */
+/* ===== SIDEBAR ===== */
 .sidebar {
   background: var(--background-primary);
   border-radius: var(--radius-2xl);
@@ -812,7 +906,6 @@ body {
 .filters-panel h3 {
   font-size: var(--font-size-xl);
   font-weight: 700;
-  color: var(--text-primary);
   margin-bottom: var(--space-6);
 }
 
@@ -820,14 +913,9 @@ body {
   margin-bottom: var(--space-8);
 }
 
-.filter-group:last-child {
-  margin-bottom: var(--space-6);
-}
-
 .filter-group h4 {
   font-size: var(--font-size-base);
   font-weight: 600;
-  color: var(--text-primary);
   margin-bottom: var(--space-4);
 }
 
@@ -852,34 +940,7 @@ body {
   background: var(--background-secondary);
 }
 
-.filter-options input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: var(--primary-color);
-}
-
-.rating-filter {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.rating-option {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  padding: var(--space-2);
-  border-radius: var(--radius-md);
-  transition: background-color var(--transition-fast);
-}
-
-.rating-option:hover {
-  background: var(--background-secondary);
-}
-
+.filter-options input[type="checkbox"],
 .rating-option input[type="radio"] {
   width: 18px;
   height: 18px;
@@ -894,7 +955,6 @@ body {
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
   background: var(--background-primary);
-  color: var(--text-primary);
   cursor: pointer;
   transition: border-color var(--transition-fast);
 }
@@ -902,7 +962,6 @@ body {
 .filter-group select:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
 }
 
 .clear-filters {
@@ -921,11 +980,22 @@ body {
 .clear-filters:hover {
   background: var(--background-tertiary);
   color: var(--text-primary);
-  border-color: var(--primary-color);
 }
 
-/* RESPONSIVE DESIGN */
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 1200px) {
+  .nav-content {
+    gap: var(--space-6);
+  }
+}
+
 @media (max-width: 1024px) {
+  .nav-content {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+    text-align: center;
+  }
+  
   .main-content {
     grid-template-columns: 1fr;
     gap: var(--space-6);
@@ -936,34 +1006,28 @@ body {
     position: static;
     order: -1;
   }
-  
-  .search-bar {
-    min-width: 250px;
-  }
 }
 
 @media (max-width: 768px) {
   .nav-content {
-    flex-direction: column;
-    gap: var(--space-4);
     padding: var(--space-4);
   }
   
-  .nav-actions {
-    width: 100%;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: var(--space-3);
+  .nav-buttons {
+    gap: var(--space-2);
   }
   
-  .search-bar {
-    min-width: 100%;
-    max-width: 100%;
+  .nav-btn {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--font-size-xs);
+  }
+  
+  .profile-name {
+    display: none;
   }
   
   .featured-card {
     grid-template-columns: 1fr;
-    min-height: auto;
   }
   
   .featured-card img {
@@ -979,10 +1043,6 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: var(--space-4);
   }
-  
-  .sidebar {
-    padding: var(--space-6);
-  }
 }
 
 @media (max-width: 480px) {
@@ -990,10 +1050,7 @@ body {
     padding: var(--space-4) var(--space-3);
   }
   
-  .recipes-grid {
-    grid-template-columns: 1fr;
-  }
-  
+  .recipes-grid,
   .trending-cards {
     grid-template-columns: 1fr;
   }
@@ -1005,56 +1062,27 @@ body {
   .card-content {
     padding: var(--space-4);
   }
-}
-
-/* LOADING STATES AND ANIMATIONS */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  
+  .profile-dropdown {
+    min-width: 240px;
+    right: -20px;
   }
 }
 
-.recipe-card,
-.trending-card,
-.featured-card {
-  animation: fadeInUp var(--transition-slow) ease-out;
-}
-
-/* ACCESSIBILITY IMPROVEMENTS */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* FOCUS STATES FOR ACCESSIBILITY */
+/* ===== ACCESSIBILITY ===== */
 .recipe-card:focus,
 .trending-card:focus,
 .featured-card:focus,
 .nav-btn:focus,
-.like-btn:focus {
+.like-btn:focus,
+.profile-menu:focus {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
 }
 
-/* HIGH CONTRAST MODE SUPPORT */
-@media (prefers-contrast: high) {
-  :root {
-    --text-primary: #000000;
-    --text-secondary: #333333;
-    --background-primary: #ffffff;
-    --background-secondary: #f0f0f0;
-    --primary-color: #0066cc;
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
   }
 }
 </style>
-
