@@ -130,7 +130,7 @@ onMounted(async () => {
 
       <!-- Login Form -->
       <form v-if="showLogin" @submit.prevent="loginUser" class="auth-form">
-        <h2>Login</h2>
+        <h2 style="margin-bottom: 5px;">Login</h2>
         
         <div class="form-group">
           <label for="login-email">Email:</label>
@@ -167,7 +167,7 @@ onMounted(async () => {
 
       <!-- Register Form -->
       <form v-else @submit.prevent="registerUser" class="auth-form">
-        <h2>Register</h2>
+        <h2 style="margin-bottom: 5px;">Register</h2>
         
         <div class="form-group">
           <label for="register-name">Name:</label>
@@ -257,7 +257,7 @@ onMounted(async () => {
 }
 
 .toggle-btn.active {
-  background: #007bff;
+  background: #08951f;
   color: white;
 }
 
@@ -288,12 +288,12 @@ onMounted(async () => {
 
 .form-input:focus {
   outline: none;
-  border-color: #007bff;
+  border-color: #08951f;
 }
 
 .submit-btn {
   padding: 12px;
-  background: #007bff;
+  background: #08951f;
   color: white;
   border: none;
   border-radius: 4px;
@@ -303,7 +303,7 @@ onMounted(async () => {
 }
 
 .submit-btn:hover:not(:disabled) {
-  background: #0056b3;
+  background: #056114;
 }
 
 .submit-btn:disabled {
