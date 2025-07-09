@@ -1,4 +1,4 @@
-
+<!--FIX TRENDING AND RECIPE OF THE DAY!!!!!!!!-->
 <template>
   <div class="home-page">
     <nav class="navbar">
@@ -80,6 +80,42 @@
     <div v-else>
       <div class="main-content">
         <div class="recipes-section">
+          <!-- Recipe of the Day -->
+          <div class="recipe-of-day" v-if="recipeOfDay">
+            <h2>Recipe of the Day 🌟</h2>
+            <div class="featured-card" @click="openRecipe(recipeOfDay)">
+              <img :src="recipeOfDay.image" :alt="recipeOfDay.title">
+              <div class="featured-content">
+                <h3>{{ recipeOfDay.title }}</h3>
+                <p>{{ recipeOfDay.description }}</p>
+                <div class="featured-meta">
+                  <div class="rating">
+                    <span class="stars">{{ '★'.repeat(Math.floor(recipeOfDay.rating)) }}{{ '☆'.repeat(5 - Math.floor(recipeOfDay.rating)) }}</span>
+                    <span>({{ recipeOfDay.reviewCount }})</span>
+                  </div>
+                  <span class="cook-time">⏱️ {{ recipeOfDay.cookTime }}min</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Trending Section -->
+          <div class="trending-section">
+            <h2>🔥 Trending</h2>
+            <div class="trending-cards">
+              <div
+                v-for="trending in trendingRecipes"
+                :key="trending.id"
+                class="trending-card"
+                @click="openRecipe(trending)"
+              >
+                <img :src="trending.image" :alt="trending.title">
+                <div class="trending-content">
+                  <h4>{{ trending.title }}</h4>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div class="recipes-grid">
             <div
@@ -188,9 +224,23 @@ const currentUser = ref({
   email: 'julia@flavorcraft.com'
 })
 
+// Recipe of the Day and Trending Logic
+const recipeOfDay = computed(() => {
+  // Get the highest rated recipe as recipe of the day
+  return recipes.value.reduce((best, current) => 
+    current.rating > best.rating ? current : best
+  )
+})
 
+const trendingRecipes = computed(() => {
+  // Get top 3 recipes by rating, excluding the recipe of the day
+  return recipes.value
+    .filter(recipe => recipe.id !== recipeOfDay.value?.id)
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, 3)
+})
 
-// SAMPLE DATA!! - Updated with title case difficulties
+//SAMPLE DATA!!!!
 const recipes = ref([
  {
    id: 1,
@@ -200,8 +250,7 @@ const recipes = ref([
    rating: 4.8,
    reviewCount: 245,
    cookTime: 25,
-   difficulty: "Easy", // Changed from "easy"
-   isLiked: false
+   difficulty: "Easy", //has to be capitalized
  },
  {
    id: 2,
@@ -211,7 +260,7 @@ const recipes = ref([
    rating: 4.6,
    reviewCount: 189,
    cookTime: 20,
-   difficulty: "Easy", // Changed from "easy"
+   difficulty: "Easy", 
    isLiked: false
  },
  {
@@ -222,7 +271,7 @@ const recipes = ref([
    rating: 4.9,
    reviewCount: 156,
    cookTime: 180,
-   difficulty: "Hard", // Changed from "hard"
+   difficulty: "Hard", 
    isLiked: true
  },
  {
@@ -233,7 +282,7 @@ const recipes = ref([
    rating: 4.3,
    reviewCount: 98,
    cookTime: 15,
-   difficulty: "Easy", // Changed from "easy"
+   difficulty: "Easy", 
    isLiked: false
  },
  {
@@ -244,7 +293,7 @@ const recipes = ref([
    rating: 4.7,
    reviewCount: 203,
    cookTime: 30,
-   difficulty: "Med", // Changed from "med"
+   difficulty: "Med", 
    isLiked: true
  },
  {
@@ -255,7 +304,7 @@ const recipes = ref([
    rating: 3.2,
    reviewCount: 124,
    cookTime: 12,
-   difficulty: "Easy", // Changed from "easy"
+   difficulty: "Easy",
    isLiked: false
  },
  {
@@ -266,7 +315,7 @@ const recipes = ref([
    rating: 5.0,
    reviewCount: 87,
    cookTime: 45,
-   difficulty: "Hard", // Changed from "hard"
+   difficulty: "Hard", 
    isLiked: false
  },
  {
@@ -277,7 +326,7 @@ const recipes = ref([
    rating: 4.4,
    reviewCount: 312,
    cookTime: 35,
-   difficulty: "Med", // Changed from "med"
+   difficulty: "Med", 
    isLiked: true
  }
 ])
@@ -311,11 +360,11 @@ const filteredRecipes = computed(() => {
 })
 
 function handleSearch() {
-  // Search is handled reactively by the computed property
+ 
 }
 
 function applyFilters() {
-  // Filters are applied reactively by the computed property
+  
 }
 
 function clearFilters() {
@@ -328,7 +377,7 @@ function clearFilters() {
 function toggleLike(recipe) {
  recipe.isLiked = !recipe.isLiked
  
- // Save to localStorage for LikedPage component
+
  const likedRecipes = recipes.value.filter(r => r.isLiked).map(r => ({
    ...r,
    likedAt: new Date().toISOString()
@@ -345,7 +394,7 @@ function openRecipe(recipe) {
 function goToHome() {
  window.scrollTo({ top: 0, behavior: 'smooth' })
  showLiked.value = false
- clearFilters() // Clear filters when going home
+ clearFilters() 
  console.log('going to home page')
 }
 
@@ -931,7 +980,7 @@ body {
   gap: var(--space-3);
   font-size: var(--font-size-sm);
   cursor: pointer;
-  padding: var(--space-2);
+  padding: var(--space-3);
   border-radius: var(--radius-md);
   transition: background-color var(--transition-fast);
 }

@@ -1,15 +1,14 @@
 <script setup>
-import Register from './components/Register.vue';
-import Home from './components/Home.vue';
-import RecipeDetails from './components/RecipeDetails.vue';
+import Home from './Home.vue';   // ⬅ the page that already contains the nav bar
 </script>
 
 <template>
   <div id="app">
-    <RecipeDetails />
+    <!-- Home controls which sub‑view (recipes list, liked list, or details) is visible -->
+    <Home />
   </div>
 </template>
 
 <style scoped>
-
+/* leave empty or add global styles */
 </style>
