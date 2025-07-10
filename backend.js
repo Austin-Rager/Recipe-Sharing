@@ -5,6 +5,12 @@ const cors = require("cors");
 const session = require("express-session");
 const bcrypt = require('bcrypt'); 
 
+//aws
+const multer = require('multer');
+const AWS = require('aws-sdk');
+const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+
 const {Account, Recipe} = require("./model.js");
 
 const app = express();
@@ -23,6 +29,34 @@ app.use(
         }
     })
 );
+
+// Configure AWS S3
+AWS.config.update({
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION || 'us-east-1'
+});
+
+const s3 = new AWS.S3();
+const BUCKET_NAME = process.env.S3_BUCKET_NAME;
+
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB limit
+    },
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.'));
+        }
+    }
+});
+
 //registration users
 app.post("/register", async (req,res) =>{
     const data = req.body;
@@ -101,7 +135,8 @@ app.get("/logout", (req, res) =>{
 });
 
 //post recipe
-app.post("/recipe", async (req, res) => {
+//post recipe with images
+app.post("/recipe", upload.array('images', 5), async (req, res) => {
     const data = req.body;
     
     if (!req.session.session_username) {
@@ -112,30 +147,73 @@ app.post("/recipe", async (req, res) => {
         return res.status(400).json({ error: "Recipe name is required" });
     }
     
-    if (!data.ingredients || data.ingredients.length === 0) {
+    // Parse ingredients and instructions if they're JSON strings
+    let ingredients, instructions;
+    try {
+        ingredients = typeof data.ingredients === 'string' ? JSON.parse(data.ingredients) : data.ingredients;
+        instructions = typeof data.instructions === 'string' ? JSON.parse(data.instructions) : data.instructions;
+    } catch (error) {
+        return res.status(400).json({ error: "Invalid ingredients or instructions format" });
+    }
+    
+    if (!ingredients || ingredients.length === 0) {
         return res.status(400).json({ error: "Recipe must have at least one ingredient" });
     }
 
-    if (!data.instructions || data.instructions.length === 0) {
+    if (!instructions || instructions.length === 0) {
         return res.status(400).json({ error: "Recipe must have at least one instruction step" });
     }
 
     try {
+        // Create the recipe first
         const newRecipe = await Recipe.create({
             name: data.name,
             description: data.description || "",
-            ingredients: data.ingredients,
-            instructions: data.instructions,
+            ingredients: ingredients,
+            instructions: instructions,
             rating: data.rating,
             time: data.time,
             difficulty: data.difficulty,
-            creator: req.session.session_username, 
+            creator: req.session.session_username,
+            images: []
         });
+
+        // Upload images if any were provided
+        const uploadedImages = [];
+        if (req.files && req.files.length > 0) {
+            for (const file of req.files) {
+                const fileExtension = path.extname(file.originalname);
+                const fileName = `recipes/${newRecipe._id}/${uuidv4()}${fileExtension}`;
+
+                const uploadParams = {
+                    Bucket: BUCKET_NAME,
+                    Key: fileName,
+                    Body: file.buffer,
+                    ContentType: file.mimetype,
+                    Metadata: {
+                        'recipe-id': newRecipe._id.toString(),
+                        'uploaded-by': req.session.session_username,
+                        'upload-date': new Date().toISOString()
+                    }
+                };
+
+                const result = await s3.upload(uploadParams).promise();
+                uploadedImages.push({
+                    url: result.Location,
+                    key: fileName,
+                    uploadedAt: new Date()
+                });
+            }
+
+            newRecipe.images = uploadedImages;
+            await newRecipe.save();
+        }
 
         console.log("New recipe created by:", req.session.session_username);
         res.status(201).json({
             message: "Recipe created successfully",
-            recipe: newRecipe
+            recipe: newRecipe,
+            imagesUploaded: uploadedImages.length
         });
         
     } catch (error) {
@@ -353,6 +431,18 @@ app.get("/recipes", async (req, res) => {
     }
 });
 
+// Error handler for multer
+app.use((error, req, res, next) => {
+    if (error instanceof multer.MulterError) {
+        if (error.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
+        }
+    }
+    if (error.message === 'Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.') {
+        return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: error.message });
+});
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
