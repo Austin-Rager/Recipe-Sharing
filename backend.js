@@ -134,7 +134,6 @@ app.get("/logout", (req, res) =>{
     res.status(403).send("User is not logged in");
 });
 
-//post recipe
 //post recipe with images
 app.post("/recipe", upload.array('images', 5), async (req, res) => {
     const data = req.body;
@@ -428,6 +427,159 @@ app.get("/recipes", async (req, res) => {
     } catch (error) {
         console.error("Get recipes error:", error);
         res.status(500).json({ error: "Failed to retrieve recipes" });
+    }
+});
+
+// Get single recipe by ID
+app.get("/recipe/:id", async (req, res) => {
+    try {
+        const recipe = await Recipe.findById(req.params.id);
+        
+        if (!recipe) {
+            return res.status(404).json({ error: "Recipe not found" });
+        }
+
+        res.status(200).json({
+            message: "Recipe retrieved successfully",
+            recipe: recipe
+        });
+
+    } catch (error) {
+        console.error("Get recipe error:", error);
+        if (error.name === 'CastError') {
+            res.status(400).json({ error: "Invalid recipe ID" });
+        } else {
+            res.status(500).json({ error: "Failed to retrieve recipe" });
+        }
+    }
+});
+
+// Get all recipes with signed URLs
+app.get("/recipes/with-images", async (req, res) => {
+    try {
+        const recipes = await Recipe.find({});
+
+        // Generate signed URLs for all recipes
+        const recipesWithImages = recipes.map(recipe => {
+            const signedUrls = recipe.images.map((image, index) => {
+                const signedUrl = s3.getSignedUrl('getObject', {
+                    Bucket: BUCKET_NAME,
+                    Key: image.key,
+                    Expires: 3600 // 1 hour
+                });
+
+                return {
+                    index: index,
+                    signedUrl: signedUrl,
+                    uploadedAt: image.uploadedAt,
+                    expiresIn: 3600
+                };
+            });
+
+            return {
+                ...recipe.toObject(),
+                images: signedUrls 
+            };
+        });
+
+        res.status(200).json({
+            message: "Recipes with images retrieved successfully",
+            count: recipesWithImages.length,
+            recipes: recipesWithImages
+        });
+
+    } catch (error) {
+        console.error("Get recipes with images error:", error);
+        res.status(500).json({ error: "Failed to retrieve recipes with images" });
+    }
+});
+
+// Get single recipe with signed URLs
+app.get("/recipe/:id/with-images", async (req, res) => {
+    try {
+        const recipeId = req.params.id;
+        const recipe = await Recipe.findById(recipeId);
+        
+        if (!recipe) {
+            return res.status(404).json({ error: "Recipe not found" });
+        }
+
+        // Generate signed URLs for images
+        const signedUrls = recipe.images.map((image, index) => {
+            const signedUrl = s3.getSignedUrl('getObject', {
+                Bucket: BUCKET_NAME,
+                Key: image.key,
+                Expires: 3600
+            });
+
+            return {
+                index: index,
+                signedUrl: signedUrl,
+                uploadedAt: image.uploadedAt,
+                expiresIn: 3600
+            };
+        });
+
+        res.json({
+            message: "Recipe with images retrieved successfully",
+            recipe: {
+                ...recipe.toObject(),
+                images: signedUrls // Replace image metadata with signed URLs
+            }
+        });
+
+    } catch (error) {
+        console.error('Error getting recipe with images:', error);
+        if (error.name === 'CastError') {
+            res.status(400).json({ error: "Invalid recipe ID" });
+        } else {
+            res.status(500).json({ error: 'Failed to retrieve recipe with images' });
+        }
+    }
+});
+
+// Get user's recipes with signed URLs
+app.get("/users-recipes/with-images", async (req, res) => {
+    if (!req.session.session_username) {
+        return res.status(401).json({ error: "Must be logged in" });
+    }
+
+    try {
+        const recipes = await Recipe.find({ 
+            creator: req.session.session_username 
+        }).sort({ createdAt: -1 });
+
+        const recipesWithImages = recipes.map(recipe => {
+            const signedUrls = recipe.images.map((image, index) => {
+                const signedUrl = s3.getSignedUrl('getObject', {
+                    Bucket: BUCKET_NAME,
+                    Key: image.key,
+                    Expires: 3600
+                });
+
+                return {
+                    index: index,
+                    signedUrl: signedUrl,
+                    uploadedAt: image.uploadedAt,
+                    expiresIn: 3600
+                };
+            });
+
+            return {
+                ...recipe.toObject(),
+                images: signedUrls
+            };
+        });
+
+        res.status(200).json({
+            message: "Your recipes with images retrieved successfully",
+            count: recipesWithImages.length,
+            recipes: recipesWithImages
+        });
+
+    } catch (error) {
+        console.error("Get user recipes with images error:", error);
+        res.status(500).json({ error: "Failed to retrieve your recipes with images" });
     }
 });
 
