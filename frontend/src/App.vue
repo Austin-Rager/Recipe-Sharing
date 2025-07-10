@@ -1,15 +1,15 @@
 <script setup>
-import Register from './components/Register.vue';
 import Home from './components/Home.vue';
-import RecipeDetails from './components/RecipeDetails.vue';
+import My_recipes from './components/Create_Recipe.vue';
+import Register from './components/Register.vue';
 </script>
 
 <template>
   <div id="app">
-    <RecipeDetails />
+    <Register />
   </div>
 </template>
 
 <style scoped>
 
-</style>
+</style> 

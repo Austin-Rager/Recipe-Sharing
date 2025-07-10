@@ -173,7 +173,9 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import LikedPage from './components/LikedPage.vue';
+import LikedPage from './LikedPage.vue';
+import RecipeDetails from './RecipeDetails.vue';
+import Register from './Register.vue';
 
 const searchQuery = ref('')
 const showFilters = ref(false) 

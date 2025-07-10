@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 
-const URL = "http://localhost:3000";
+const URL = "http://localhost:8080";
 
 const user = ref({name: "", email: "", password: ""});
 const currentUser = ref(null);
@@ -26,7 +26,7 @@ async function registerUser() {
   errorMessage.value = "";
   
   try {
-    const res = await fetch(`${URL}/users`, {
+    const res = await fetch(`${URL}/register`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify(user.value),
@@ -52,7 +52,7 @@ async function loginUser() {
   errorMessage.value = "";
   
   try {
-    const res = await fetch(`${URL}/session`, {
+    const res = await fetch(`${URL}/login`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify(user.value),
@@ -77,7 +77,7 @@ async function loginUser() {
 
 async function logoutUser() {
   try {
-    await fetch(`${URL}/session`, {
+    await fetch(`${URL}/logout`, {
       method: "DELETE",
       credentials: "include",
     });
