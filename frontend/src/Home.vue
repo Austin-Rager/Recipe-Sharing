@@ -1,81 +1,100 @@
-<!--FIX TRENDING AND RECIPE OF THE DAY!!!!!!!!-->
 <template>
   <div class="home-page">
     <nav class="navbar">
-        <div class="nav-content">
-          <h1 class="logo">🍳 FlavorCraft</h1>
-          
-          <div class="nav-center">
-            <div class="search-bar">
-              <input
-                type="text"
-                placeholder="Search recipes..."
-                v-model="searchQuery"
-                @input="handleSearch"
-              />
-              <span class="search-icon">🔍</span>
-            </div>
-          </div>
-          
-          <div class="nav-actions">
-            <div class="nav-buttons">
-              <button class="nav-btn home-btn" @click="goToHome">
-                Home
-              </button>
-              <button class="nav-btn liked-btn" @click="showLiked = !showLiked">
-                My Liked
-              </button>
-              <button class="nav-btn create-btn" @click="goToCreateRecipe">
-                Create Recipe
-              </button>
-            </div>
+      <div class="nav-content">
+        <h1 class="logo">🍳 FlavorCraft</h1>
 
-            <div class="profile-section" v-if="currentUser">
-              <div class="profile-menu" @click="toggleProfileMenu">
-                <div class="profile-avatar">
-                  <span class="profile-icon">👤</span>
-                </div>
-                <span class="profile-name">{{ currentUser.name || 'User' }}</span>
-                <span class="dropdown-arrow">▼</span>
-              </div>
-
-              <div class="profile-dropdown" v-if="showProfileMenu">
-                <div class="profile-dropdown-header">
-                  <div class="profile-avatar-large">
-                    <span class="profile-icon-large">👤</span>
-                  </div>
-                  <div class="profile-info">
-                    <h4>{{ currentUser.name || 'User' }}</h4>
-                    <p>{{ currentUser.email || 'user@example.com' }}</p>
-                  </div>
-                </div>
-                <div class="profile-dropdown-menu">
-                  <button class="dropdown-item" @click="goToProfile">
-                    My Profile
-                  </button>
-                  <button class="dropdown-item" @click="goToLikedRecipes">
-                    Liked Recipes
-                  </button>
-                  <button class="dropdown-item" @click="goToMyRecipes">
-                    My Recipes
-                  </button>
-                  <div class="dropdown-divider"></div>
-                  <button class="dropdown-item logout" @click="logout">
-                    Logout
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div v-else class="profile-loading">
-              <div class="loading-spinner">⟳</div>
-            </div>
+        <div class="nav-center">
+          <div class="search-bar">
+            <input
+              type="text"
+              placeholder="Search recipes..."
+              v-model="searchQuery"
+              @input="handleSearch"
+            />
+            <span class="search-icon">🔍</span>
           </div>
         </div>
-      </nav>
+
+        <div class="nav-actions">
+          <div class="nav-buttons">
+            <button class="nav-btn home-btn" @click="goToHome">
+              Home
+            </button>
+            <button class="nav-btn liked-btn" @click="showLiked = !showLiked">
+              My Liked
+            </button>
+            <button class="nav-btn create-btn" @click="goToCreateRecipe">
+              Create Recipe
+            </button>
+          </div>
+
+          <div class="profile-section" v-if="currentUser">
+            <div class="profile-menu" @click="toggleProfileMenu">
+              <div class="profile-avatar">
+                <img
+                  v-if="avatarUrl"
+                  :src="avatarUrl"
+                  alt="User avatar"
+                  class="profile-avatar-img"
+                  loading="lazy"
+                />
+                <span v-else class="profile-icon">👤</span>
+              </div>
+              <span class="profile-name">{{ currentUser.name || 'User' }}</span>
+              <span class="dropdown-arrow">▼</span>
+            </div>
+
+            <div class="profile-dropdown" v-if="showProfileMenu">
+              <div class="profile-dropdown-header">
+                <div class="profile-avatar-large">
+                  <img
+                    v-if="avatarUrl"
+                    :src="avatarUrl"
+                    alt="User avatar"
+                    class="profile-avatar-img-large"
+                    loading="lazy"
+                  />
+                  <span v-else class="profile-icon-large">👤</span>
+                </div>
+                <div class="profile-info">
+                  <h4>{{ currentUser.name || 'User' }}</h4>
+                  <p>{{ currentUser.email || 'user@example.com' }}</p>
+                </div>
+              </div>
+              <div class="profile-dropdown-menu">
+                <button class="dropdown-item" @click="goToProfile">
+                  My Profile
+                </button>
+                <button class="dropdown-item" @click="goToLikedRecipes">
+                  Liked Recipes
+                </button>
+                <button class="dropdown-item" @click="goToMyRecipes">
+                  My Recipes
+                </button>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item logout" @click="logout">
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="profile-loading">
+            <div class="loading-spinner">⟳</div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
 
 
     <LikedPage v-if="showLiked" @go-home="goToHome" />
+    <ProfilePage v-if="showProfile" @go-home="goToHome" @go-to-create="goToCreateRecipe" />
+
+
+
+    
   
     <div v-else>
       <div class="main-content">
@@ -210,6 +229,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import LikedPage from './components/LikedPage.vue';
+import ProfilePage from './components/MyProfile.vue';
 
 const searchQuery = ref('')
 const showFilters = ref(false) 
@@ -231,6 +251,21 @@ const recipeOfDay = computed(() => {
     current.rating > best.rating ? current : best
   )
 })
+
+// Fixed: Add computed property for avatar URL
+const avatarUrl = computed(() => {
+  return getAvatarUrl(currentUser.value.name || currentUser.value.email || 'default', 'thumbs')
+})
+
+// DiceBear avatar function
+function getAvatarUrl(seed, style = 'thumbs', size = 200) {
+  const cleanSeed = encodeURIComponent(seed.toLowerCase().replace(/\s/g, ''))
+  return `https://api.dicebear.com/9.x/${style}/png?seed=${cleanSeed}&size=${size}`
+}
+
+
+console.log(getAvatarUrl(currentUser.value.name || currentUser.value.email || 'default', 'thumbs'))
+
 
 const trendingRecipes = computed(() => {
   // Get top 3 recipes by rating, excluding the recipe of the day
@@ -394,6 +429,7 @@ function openRecipe(recipe) {
 function goToHome() {
  window.scrollTo({ top: 0, behavior: 'smooth' })
  showLiked.value = false
+ showProfile.value = false 
  clearFilters() 
  console.log('going to home page')
 }
@@ -407,11 +443,6 @@ function toggleProfileMenu() {
  showProfileMenu.value = !showProfileMenu.value
 }
 
-function goToProfile() {
- showProfileMenu.value = false
- alert('profile page - backend not ready yet!')
- console.log('going to profile page')
-}
 
 function goToLikedRecipes() {
  showProfileMenu.value = false
@@ -456,9 +487,64 @@ onMounted(() => {
 onUnmounted(() => {
  document.removeEventListener('click', handleClickOutside)
 })
+
+const showProfile = ref(false)
+
+function goToProfile() {
+  showProfileMenu.value = false
+  showProfile.value = true
+  showLiked.value = false
+  console.log('going to profile page')
+}
 </script>
 
 <style>
+
+.profile-avatar img,
+.profile-avatar-large img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Remove background when image loads */
+.profile-avatar:has(img),
+.profile-avatar-large:has(img) {
+  background: transparent !important;
+}
+.profile-avatar-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-avatar-img-large {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-avatar-img {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  display: block;
+}
+
+.profile-avatar-img-large {
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  display: block;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
 /* Reset and Base Styles */
 * {
   box-sizing: border-box;
