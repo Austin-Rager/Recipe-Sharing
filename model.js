@@ -81,7 +81,20 @@ const RecipeSchema = new mongoose.Schema({
                 required:true,
             },
         }],
-
+    images: [{
+        url: {
+            type: String,
+            required: true
+        },
+        key: {
+            type: String,
+            required: true
+        },
+        uploadedAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
     likes:{
         type: Number,
         required:false,
