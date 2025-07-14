@@ -21,7 +21,7 @@
             <button class="nav-btn home-btn" @click="goToHome">
               Home
             </button>
-            <!-- Only show these buttons when logged in -->
+    
             <template v-if="isLoggedIn">
               <button class="nav-btn liked-btn" @click="goToLikedRecipes">
                 My Liked
@@ -32,7 +32,7 @@
             </template>
           </div>
 
-          <!-- Show profile section only when logged in -->
+
           <div class="profile-section" v-if="isLoggedIn && currentUser">
             <div class="profile-menu" @click="toggleProfileMenu">
               <div class="profile-avatar">
@@ -84,7 +84,7 @@
             </div>
           </div>
 
-          <!-- Show login/register buttons when not logged in -->
+
           <div v-else class="auth-buttons">
             <button class="nav-btn login-btn" @click="showLogin">
               Login
@@ -97,7 +97,7 @@
       </div>
     </nav>
 
-    <!-- Login/Register Page -->
+  
     <Register 
       v-if="showLoginPage"
       :showBackButton="true"
@@ -105,13 +105,12 @@
       @go-back="goBackToHome"
     />
 
-    <!-- Loading state -->
+  
     <div v-else-if="isLoadingInitial" class="loading-container">
       <div class="loading-spinner">⟳</div>
       <p>Loading recipes...</p>
     </div>
 
-    <!-- Error state -->
     <div v-else-if="apiError" class="error-container">
       <div class="error-message">
         <h3>⚠️ Connection Error</h3>
@@ -121,7 +120,7 @@
       </div>
     </div>
 
-    <!-- Your existing page components -->
+
     <LikedPage 
       v-else-if="showLiked && isLoggedIn" 
       @go-home="goToHome" 
@@ -139,11 +138,11 @@
       @recipe-created="handleRecipeCreated"
     />
 
-    <!-- Home Content - only shows when no other page is active -->
+   
     <div v-else>
       <div class="main-content">
         <div class="recipes-section">
-          <!-- Recipe of the Day -->
+
           <div class="recipe-of-day" v-if="recipeOfDay">
             <h2>Recipe of the Day 🌟</h2>
             <div class="featured-card" @click="openRecipe(recipeOfDay)">
@@ -162,7 +161,7 @@
             </div>
           </div>
 
-          <!-- Trending Section -->
+
           <div class="trending-section">
             <h2>🔥 Trending</h2>
             <div class="trending-cards">
@@ -214,7 +213,7 @@
           </div>
         </div>
         
-        <!-- Your existing sidebar -->
+
         <div class="sidebar" :class="{open: showFilters}">
           <div class="filters-panel">
             <h3>Filters</h3>
@@ -276,9 +275,9 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import LikedPage from './components/LikedPage.vue';
 import ProfilePage from './components/MyProfile.vue';
 import CreateRecipePage from './components/CreateRecipe.vue';
-import Register from './components/Register.vue'; // ADDED: Import Register component
+import Register from './components/Register.vue'; 
 
-// API Configuration - CHANGE THIS TO YOUR BACKEND URL
+
 const API_BASE_URL = 'http://localhost:8080';
 
 const searchQuery = ref('')
@@ -286,7 +285,7 @@ const showFilters = ref(false)
 const showLiked = ref(false) 
 const showProfile = ref(false)
 const showCreateRecipe = ref(false)
-const showLoginPage = ref(false) // ADDED: Login page state
+const showLoginPage = ref(false) 
 const selectedDifficulties = ref([])
 const minRating = ref('') 
 const maxCookTime = ref('') 
@@ -524,37 +523,35 @@ const filteredRecipes = computed(() => {
 
 async function checkAuthStatus() {
   try {
-    // First try to get public recipes (this doesn't require auth)
     const response = await api.getAllRecipes();
     apiRecipes.value = response.recipes.map(convertBackendRecipe);
     
-    // Then try to get liked recipes to check if we're logged in
+
     try {
       const likedResponse = await api.getLikedRecipes();
       const likedIds = new Set(likedResponse.likedRecipes.map(r => r._id));
       likedRecipeIds.value = likedIds;
       
-      // Update liked status in recipes
+   
       apiRecipes.value.forEach(recipe => {
         recipe.isLiked = likedIds.has(recipe.id);
       });
-      
-      // If we got here, we're logged in
+   
       isLoggedIn.value = true;
       
-      // Get full user info from /me endpoint
+ 
       try {
         const userInfo = await api.getUserInfo();
         currentUser.value = userInfo;
         console.log('User logged in:', userInfo);
       } catch (error) {
         console.error('Failed to get user info:', error);
-        // Fallback if something goes wrong
+  
         currentUser.value = { username: 'User', name: 'User', email: 'user@example.com' };
       }
       
     } catch (error) {
-      // Not logged in, but we can still show public recipes
+ 
       console.log('Not logged in:', error.message);
       isLoggedIn.value = false;
       currentUser.value = null;
@@ -564,7 +561,7 @@ async function checkAuthStatus() {
   } catch (error) {
     console.error('Failed to load recipes:', error);
     apiError.value = error.message;
-    // Fall back to sample data
+    
     apiRecipes.value = [];
   } finally {
     isLoadingInitial.value = false;
@@ -618,7 +615,7 @@ function goToHome() {
   showLiked.value = false;
   showProfile.value = false;
   showCreateRecipe.value = false;
-  showLoginPage.value = false; // ADDED: Reset login page
+  showLoginPage.value = false; 
   showProfileMenu.value = false;
   clearFilters();
 }
@@ -631,7 +628,7 @@ function goToCreateRecipe() {
   showCreateRecipe.value = true;
   showLiked.value = false;
   showProfile.value = false;
-  showLoginPage.value = false; // ADDED: Reset login page
+  showLoginPage.value = false; 
   showProfileMenu.value = false;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -645,7 +642,7 @@ function goToLikedRecipes() {
   showLiked.value = true;
   showProfile.value = false;
   showCreateRecipe.value = false;
-  showLoginPage.value = false; // ADDED: Reset login page
+  showLoginPage.value = false; 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -664,7 +661,7 @@ function goToProfile() {
   showProfile.value = true;
   showLiked.value = false;
   showCreateRecipe.value = false;
-  showLoginPage.value = false; // ADDED: Reset login page
+  showLoginPage.value = false; 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -672,16 +669,16 @@ function toggleProfileMenu() {
   showProfileMenu.value = !showProfileMenu.value;
 }
 
-// UPDATED: Auth UI functions
+
 function showLogin() {
-  showLoginPage.value = true; // UPDATED: Show login page instead of redirect
+  showLoginPage.value = true; 
 }
 
 function showRegister() {
-  showLoginPage.value = true; // UPDATED: Show login page instead of console.log
+  showLoginPage.value = true; 
 }
 
-// ADDED: New navigation functions
+
 function goBackToHome() {
   showLoginPage.value = false;
 }
@@ -690,14 +687,14 @@ async function handleLoginFromRegister(userData) {
   isLoggedIn.value = true;
   showLoginPage.value = false;
   
-  // Get full user info from the /me endpoint
+
   try {
     const userInfo = await api.getUserInfo();
     currentUser.value = userInfo;
     console.log('Got user info:', userInfo);
   } catch (error) {
     console.error('Failed to get user info:', error);
-    // Fallback to basic data
+
     currentUser.value = {
       username: userData.username,
       name: userData.username,
@@ -705,13 +702,12 @@ async function handleLoginFromRegister(userData) {
     };
   }
   
-  checkAuthStatus(); // Reload data for authenticated user
+  checkAuthStatus();
   setTimeout(() => {
     alert(`Welcome back, ${currentUser.value.name || currentUser.value.username}! 🎉`);
   }, 500);
 }
 
-// UPDATED: Keep existing function for backward compatibility
 function handleLoginSuccess(userData) {
   isLoggedIn.value = true;
   currentUser.value = userData;
@@ -740,11 +736,11 @@ async function logout() {
 }
 
 function handleSearch() {
-  // Search implementation
+
 }
 
 function applyFilters() {
-  // Filter implementation
+
 }
 
 function clearFilters() {
