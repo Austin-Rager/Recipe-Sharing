@@ -134,7 +134,6 @@ app.get("/logout", (req, res) =>{
     res.status(403).send("User is not logged in");
 });
 
-//post recipe
 //post recipe with images
 app.post("/recipe", upload.array('images', 5), async (req, res) => {
     const data = req.body;
