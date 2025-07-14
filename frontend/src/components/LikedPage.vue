@@ -1,11 +1,5 @@
 <template>
   <div class="liked-page">
-    <!-- Page Header -->
-    <div class="page-header">
-      <h1>❤️ My Liked Recipes</h1>
-      <p v-if="likedRecipes.length > 0">You have {{ likedRecipes.length }} liked recipes</p>
-      <p v-else>No liked recipes yet.</p>
-    </div>
 
     <!-- search and filters -->
     <div class="liked-controls" v-if="likedRecipes.length > 0">
@@ -112,11 +106,11 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 export default {
   name: 'LikedPage',
-  emits: ['go-home'],
+  emits: ['go-home', 'open-recipe'],
   setup(props, { emit }) {
     const likedRecipes = ref([])
     const searchQuery = ref('')
@@ -133,7 +127,6 @@ export default {
         )
       }
 
-
       if (selectedDifficulty.value) {
         filtered = filtered.filter(recipe => 
           recipe.difficulty.toLowerCase() === selectedDifficulty.value.toLowerCase()
@@ -142,7 +135,6 @@ export default {
 
       return filtered
     })
-
 
     const loadLikedRecipes = () => {
       const stored = localStorage.getItem('likedRecipes')
@@ -155,7 +147,6 @@ export default {
       likedRecipes.value = likedRecipes.value.filter(r => r.id !== recipe.id)
       localStorage.setItem('likedRecipes', JSON.stringify(likedRecipes.value))
       
-
       const allRecipes = JSON.parse(localStorage.getItem('allRecipes') || '[]')
       const originalRecipe = allRecipes.find(r => r.id === recipe.id)
       if (originalRecipe) {
@@ -165,7 +156,8 @@ export default {
     }
 
     const openRecipe = (recipe) => {
-      alert(`Opening recipe: ${recipe.title}`)
+      // Emit event to parent to open recipe details
+      emit('open-recipe', recipe)
     }
 
     const goToHome = () => {
@@ -199,19 +191,14 @@ export default {
       loadLikedRecipes()
     }
 
-  
     onMounted(() => {
       loadLikedRecipes()
       window.addEventListener('storage', handleStorageChange)
-    })
-
-
-    onMounted(() => {
+      
       return () => {
         window.removeEventListener('storage', handleStorageChange)
       }
     })
-
 
     return {
       likedRecipes,
