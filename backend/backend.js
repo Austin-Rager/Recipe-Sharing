@@ -450,7 +450,6 @@ app.use((error, req, res, next) => {
 
 
 // /me endpoint to get current user info
-// Add this route to your backend/backend.js file
 app.get("/me", async (req, res) => {
     if (!req.session.session_username) {
         return res.status(401).json({ error: "Not logged in" });

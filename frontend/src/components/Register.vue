@@ -16,7 +16,7 @@ const emit = defineEmits(['login-success', 'go-back'])
 
 const user = ref({
   name: "", 
-  username: "", // ADDED
+  username: "", 
   email: "", 
   password: ""
 });
@@ -145,9 +145,9 @@ function goBack() {
   emit('go-back');
 }
 
-// Check if user is already logged in
+
 onMounted(async () => {
-  // Skip session check for now since your backend doesn't have this endpoint
+
 });
 </script>
 
@@ -287,13 +287,13 @@ onMounted(async () => {
         </form>
       </div>
 
-      <!-- Show user dashboard when logged in (this probably won't show since we emit back to home) -->
+
       <div v-else class="user-dashboard">
         <h2>Welcome, {{ currentUser.username }}!</h2>
         <button @click="logoutUser" class="logout-btn">Logout</button>
       </div>
 
-      <!-- Error message display -->
+
       <div v-if="errorMessage" class="error-message">
         {{ errorMessage }}
       </div>
@@ -302,170 +302,307 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-
+/* UPDATED: Match website design system */
 .login-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  padding: 2rem 0;
+  padding: var(--space-8, 2rem) 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-
+/* Back button with website styling */
 .back-button-container {
-  max-width: 400px;
-  margin: 0 auto 1rem auto;
-  padding: 0 2rem;
+  max-width: 450px;
+  margin: 0 auto var(--space-6, 1.5rem) auto;
+  padding: 0 var(--space-6, 1.5rem);
 }
 
 .back-btn {
-  background: none;
-  border: none;
-  color: #08951f;
-  font-size: 16px;
+  background: var(--background-primary, white);
+  border: 2px solid var(--background-tertiary, #e2e8f0);
+  color: var(--text-primary, #2c3e50);
+  font-size: var(--font-size-sm, 0.875rem);
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0;
-  transition: color 0.3s;
+  gap: var(--space-2, 0.5rem);
+  padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+  border-radius: var(--radius-full, 9999px);
+  transition: all var(--transition-fast, 150ms ease-in-out);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+  text-decoration: none;
 }
 
 .back-btn:hover {
-  color: #056114;
+  background: var(--primary-color, #ff6b6b);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
 }
 
+/* Main container with website styling */
 .auth-container {
-  max-width: 400px;
-  margin: 2rem auto;
-  padding: 2rem;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  max-width: 450px;
+  margin: 0 auto;
+  padding: var(--space-8, 2rem);
+  background: var(--background-primary, white);
+  border-radius: var(--radius-2xl, 20px);
+  box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.1));
+  border: 1px solid var(--background-tertiary, #e2e8f0);
 }
 
+/* Toggle buttons with website styling */
 .form-toggle {
   display: flex;
-  margin-bottom: 2rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  margin-bottom: var(--space-8, 2rem);
+  border: 1px solid var(--background-tertiary, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
   overflow: hidden;
+  background: var(--background-secondary, #f8fafc);
 }
 
 .toggle-btn {
   flex: 1;
-  padding: 12px;
-  background: #f5f5f5;
+  padding: var(--space-4, 1rem);
+  background: transparent;
   border: none;
   cursor: pointer;
-  transition: background-color 0.3s;
+  font-weight: 600;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--text-secondary, #5a6c7d);
+  transition: all var(--transition-fast, 150ms ease-in-out);
 }
 
 .toggle-btn.active {
-  background: #08951f;
+  background: var(--primary-color, #ff6b6b);
   color: white;
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
 }
 
+.toggle-btn:hover:not(.active) {
+  background: var(--background-tertiary, #e2e8f0);
+  color: var(--text-primary, #2c3e50);
+}
+
+/* Form styling */
 .auth-form {
   display: flex;
   flex-direction: column;
 }
 
+.auth-form h2 {
+  font-size: var(--font-size-2xl, 1.5rem);
+  font-weight: 700;
+  color: var(--text-primary, #2c3e50);
+  margin-bottom: var(--space-6, 1.5rem);
+  text-align: center;
+}
+
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-6, 1.5rem);
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #333;
+  margin-bottom: var(--space-2, 0.5rem);
+  font-weight: 600;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--text-primary, #2c3e50);
 }
 
 .form-input {
   width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 16px;
-  transition: border-color 0.3s;
+  padding: var(--space-4, 1rem);
+  border: 2px solid var(--background-tertiary, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  font-size: var(--font-size-base, 1rem);
+  background: var(--background-primary, white);
+  color: var(--text-primary, #2c3e50);
+  transition: all var(--transition-fast, 150ms ease-in-out);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #08951f;
+  border-color: var(--primary-color, #ff6b6b);
+  box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.1);
 }
 
 .form-input:disabled {
-  background: #f5f5f5;
+  background: var(--background-secondary, #f8fafc);
   cursor: not-allowed;
   opacity: 0.7;
+  border-color: var(--background-tertiary, #e2e8f0);
 }
 
+.form-input::placeholder {
+  color: var(--text-muted, #8492a6);
+}
+
+/* Submit button with website styling */
 .submit-btn {
-  padding: 12px;
-  background: #08951f;
+  width: 100%;
+  padding: var(--space-4, 1rem);
+  background: var(--primary-color, #ff6b6b);
   color: white;
   border: none;
-  border-radius: 4px;
-  font-size: 16px;
+  border-radius: var(--radius-md, 8px);
+  font-size: var(--font-size-base, 1rem);
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all var(--transition-fast, 150ms ease-in-out);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+  margin-top: var(--space-2, 0.5rem);
 }
 
 .submit-btn:hover:not(:disabled) {
-  background: #056114;
+  background: var(--primary-hover, #ff5252);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
 }
 
 .submit-btn:disabled {
-  background: #ccc;
+  background: var(--text-muted, #8492a6);
   cursor: not-allowed;
+  transform: none;
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
 }
 
+/* User dashboard styling */
 .user-dashboard {
   text-align: center;
+  padding: var(--space-8, 2rem) 0;
 }
 
 .user-dashboard h2 {
-  color: #333;
-  margin-bottom: 1rem;
+  font-size: var(--font-size-2xl, 1.5rem);
+  font-weight: 700;
+  color: var(--text-primary, #2c3e50);
+  margin-bottom: var(--space-6, 1.5rem);
 }
 
 .logout-btn {
-  padding: 10px 20px;
-  background: #dc3545;
+  padding: var(--space-3, 0.75rem) var(--space-6, 1.5rem);
+  background: var(--danger-color, #ef4444);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md, 8px);
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all var(--transition-fast, 150ms ease-in-out);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
 }
 
 .logout-btn:hover {
-  background: #c82333;
+  background: var(--danger-hover, #dc2626);
+  transform: translateY(-1px);
 }
 
+/* Error message styling */
 .error-message {
-  margin-top: 1rem;
-  padding: 10px;
-  background: #f8d7da;
-  border: 1px solid #f5c6cb;
-  border-radius: 4px;
-  color: #721c24;
+  margin-top: var(--space-6, 1.5rem);
+  padding: var(--space-4, 1rem);
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md, 8px);
+  color: var(--hard-text, #991b1b);
+  font-size: var(--font-size-sm, 0.875rem);
+  border-left: 4px solid var(--danger-color, #ef4444);
 }
 
-
-@media (max-width: 480px) {
+/* Responsive design */
+@media (max-width: 768px) {
   .login-page {
-    padding: 1rem 0;
+    padding: var(--space-6, 1.5rem) 0;
   }
   
   .auth-container {
-    margin: 1rem;
-    padding: 1.5rem;
+    margin: 0 var(--space-4, 1rem);
+    padding: var(--space-6, 1.5rem);
+    border-radius: var(--radius-xl, 16px);
   }
   
   .back-button-container {
-    padding: 0 1rem;
+    padding: 0 var(--space-4, 1rem);
+    margin-bottom: var(--space-4, 1rem);
+  }
+  
+  .form-toggle {
+    margin-bottom: var(--space-6, 1.5rem);
+  }
+  
+  .toggle-btn {
+    padding: var(--space-3, 0.75rem);
+    font-size: var(--font-size-xs, 0.75rem);
+  }
+  
+  .auth-form h2 {
+    font-size: var(--font-size-xl, 1.25rem);
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-container {
+    margin: 0 var(--space-3, 0.75rem);
+    padding: var(--space-4, 1rem);
+  }
+  
+  .form-input {
+    padding: var(--space-3, 0.75rem);
+  }
+  
+  .submit-btn {
+    padding: var(--space-3, 0.75rem);
+  }
+}
+
+/* Loading state styling */
+.submit-btn:disabled {
+  position: relative;
+}
+
+.submit-btn:disabled::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  margin: auto;
+  border: 2px solid transparent;
+  border-top-color: rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  right: var(--space-4, 1rem);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+@keyframes spin {
+  0% { transform: translateY(-50%) rotate(0deg); }
+  100% { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* Focus styles for accessibility */
+.back-btn:focus,
+.toggle-btn:focus,
+.form-input:focus,
+.submit-btn:focus,
+.logout-btn:focus {
+  outline: 2px solid var(--primary-color, #ff6b6b);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Disable transitions for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }
 </style>
