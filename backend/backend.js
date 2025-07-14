@@ -1,9 +1,18 @@
 require('dotenv').config({ debug: false });
 
+//openAI
+const OpenAI = require("openai");
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const MODEL = "gpt-3.5-turbo";
+
+
 const express = require("express");
 const cors = require("cors");
 const session = require("express-session");
 const bcrypt = require('bcrypt'); 
+
+const rateLimit = require("express-rate-limit");
+
 
 //aws
 const multer = require('multer');
@@ -60,6 +69,40 @@ const upload = multer({
             cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.'));
         }
     }
+});
+
+async function validateRecipeAI(name, ingredients) {
+  const prompt = `
+You are a helpful assistant that verifies if the recipe is valid and realistic.
+
+Recipe name: "${name}"
+Ingredients: ${JSON.stringify(ingredients)}
+
+Please check if these ingredients make sense together for a real recipe.
+If something is unusual or not edible, say which ingredient and explain why.
+If all ingredients are fine, say: "This recipe looks good."
+  `;
+
+  const resp = await openai.chat.completions.create({
+    model: MODEL,
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0
+  });
+
+  return resp.choices[0].message.content.trim();
+}
+
+const createRecipeLimiter = rateLimit({
+  windowMs: 60 * 1000, 
+  max: 2, 
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "Too many recipes submitted. Please wait before trying again."
+  },
+  keyGenerator: (req) => {
+    return req.session?.session_username || req.ip;
+  }
 });
 
 //registration users
@@ -140,7 +183,7 @@ app.get("/logout", (req, res) =>{
 });
 
 //post recipe with images
-app.post("/recipe", upload.array('images', 5), async (req, res) => {
+app.post("/recipe", createRecipeLimiter, upload.array('images', 5), async (req, res) => {
     const data = req.body;
     
     if (!req.session.session_username) {
@@ -166,6 +209,21 @@ app.post("/recipe", upload.array('images', 5), async (req, res) => {
 
     if (!instructions || instructions.length === 0) {
         return res.status(400).json({ error: "Recipe must have at least one instruction step" });
+    }
+
+    // AI validation step
+    try {
+        const verdict = await validateRecipeAI(data.name, ingredients);
+
+        if (!verdict || !verdict.includes("This recipe looks good.")) {
+            return res.status(400).json({
+                error: "Recipe validation failed",
+                message: verdict
+            });
+        }
+    } catch (error) {
+        console.error("AI validation error:", error);
+        return res.status(500).json({ error: "AI validation failed" });
     }
 
     try {
@@ -338,26 +396,30 @@ app.put("/recipe/:id", async (req, res) => {
         const updateData = req.body;
 
         const recipe = await Recipe.findById(recipeId);
-        
-        if (!recipe) {
-            return res.status(404).json({ error: "Recipe not found" });
-        }
+        if (!recipe) return res.status(404).json({ error: "Recipe not found" });
+        if (recipe.creator !== username) return res.status(403).json({ error: "You can only update your own recipes" });
 
-        if (recipe.creator !== username) {
-            return res.status(403).json({ error: "You can only update your own recipes" });
-        }
-
-        if (updateData.name && !updateData.name.trim()) {
+        if (updateData.name && !updateData.name.trim())
             return res.status(400).json({ error: "Recipe name cannot be empty" });
-        }
-
-        if (updateData.ingredients && updateData.ingredients.length === 0) {
+        if (updateData.ingredients && updateData.ingredients.length === 0)
             return res.status(400).json({ error: "Recipe must have at least one ingredient" });
-        }
-
-        if (updateData.instructions && updateData.instructions.length === 0) {
+        if (updateData.instructions && updateData.instructions.length === 0)
             return res.status(400).json({ error: "Recipe must have at least one instruction" });
+
+        // AI validation (use updated data if provided, otherwise existing values)
+        const nameForCheck = updateData.name || recipe.name;
+        const ingredientsForCheck = updateData.ingredients || recipe.ingredients;
+
+        try {
+            const verdict = await validateRecipeAI(nameForCheck, ingredientsForCheck);
+            if (!verdict || !verdict.includes("This recipe looks good.")) {
+                return res.status(400).json({ error: "Recipe validation failed", message: verdict });
+            }
+        } catch (err) {
+            console.error("AI validation error:", err);
+            return res.status(500).json({ error: "AI validation failed" });
         }
+        // 🔹 end AI validation
 
         const updatedRecipe = await Recipe.findByIdAndUpdate(
             recipeId,
@@ -370,30 +432,20 @@ app.put("/recipe/:id", async (req, res) => {
                 ...(updateData.time !== undefined && { time: updateData.time }),
                 ...(updateData.difficulty !== undefined && { difficulty: updateData.difficulty })
             },
-            { 
-                new: true,
-                runValidators: true 
-            }
+            { new: true, runValidators: true }
         );
 
         console.log("Recipe updated by:", username);
-        res.status(200).json({
-            message: "Recipe updated successfully",
-            recipe: updatedRecipe
-        });
+        res.status(200).json({ message: "Recipe updated successfully", recipe: updatedRecipe });
 
     } catch (error) {
         console.error("Recipe update error:", error);
-        
-        if (error.name === 'ValidationError') {
-            res.status(400).json({ error: error.message });
-        } else if (error.name === 'CastError') {
-            res.status(400).json({ error: "Invalid recipe ID" });
-        } else {
-            res.status(500).json({ error: "Failed to update recipe" });
-        }
+        if (error.name === 'ValidationError') return res.status(400).json({ error: error.message });
+        if (error.name === 'CastError') return res.status(400).json({ error: "Invalid recipe ID" });
+        res.status(500).json({ error: "Failed to update recipe" });
     }
 });
+
 
 // Get recipes created by the logged-in user
 app.get("/users-recipes", async (req, res) => {
