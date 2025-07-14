@@ -14,7 +14,12 @@ const path = require('path');
 const {Account, Recipe} = require("./model.js");
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173', 
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 app.use(
@@ -441,6 +446,34 @@ app.use((error, req, res, next) => {
         return res.status(400).json({ error: error.message });
     }
     res.status(500).json({ error: error.message });
+});
+
+
+// /me endpoint to get current user info
+// Add this route to your backend/backend.js file
+app.get("/me", async (req, res) => {
+    if (!req.session.session_username) {
+        return res.status(401).json({ error: "Not logged in" });
+    }
+
+    try {
+        const user = await Account.findOne({ 
+            username: req.session.session_username 
+        }).select('-password'); // Don't send password
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        res.json({
+            username: user.username,
+            name: user.name,
+            email: user.email
+        });
+    } catch (error) {
+        console.error("Get user error:", error);
+        res.status(500).json({ error: "Failed to get user info" });
+    }
 });
 
 const PORT = process.env.PORT || 8080;

@@ -1,4 +1,5 @@
 <template>
+<!--FIX HOME PAGE SHOWING UP -->
   <div class="liked-page">
 
     <!-- search and filters -->

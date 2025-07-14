@@ -97,8 +97,16 @@
       </div>
     </nav>
 
+    <!-- Login/Register Page -->
+    <Register 
+      v-if="showLoginPage"
+      :showBackButton="true"
+      @login-success="handleLoginFromRegister"
+      @go-back="goBackToHome"
+    />
+
     <!-- Loading state -->
-    <div v-if="isLoadingInitial" class="loading-container">
+    <div v-else-if="isLoadingInitial" class="loading-container">
       <div class="loading-spinner">⟳</div>
       <p>Loading recipes...</p>
     </div>
@@ -115,7 +123,7 @@
 
     <!-- Your existing page components -->
     <LikedPage 
-      v-if="showLiked && isLoggedIn" 
+      v-else-if="showLiked && isLoggedIn" 
       @go-home="goToHome" 
     />
     
@@ -260,8 +268,6 @@
         </div>
       </div>
     </div>
-
-
   </div>
 </template>
 
@@ -271,31 +277,29 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import LikedPage from './components/LikedPage.vue';
 import ProfilePage from './components/MyProfile.vue';
 import CreateRecipePage from './components/CreateRecipe.vue';
+import Register from './components/Register.vue'; // ADDED: Import Register component
 
 // API Configuration - CHANGE THIS TO YOUR BACKEND URL
 const API_BASE_URL = 'http://localhost:8080';
-
 
 const searchQuery = ref('')
 const showFilters = ref(false) 
 const showLiked = ref(false) 
 const showProfile = ref(false)
 const showCreateRecipe = ref(false)
+const showLoginPage = ref(false) // ADDED: Login page state
 const selectedDifficulties = ref([])
 const minRating = ref('') 
 const maxCookTime = ref('') 
 const showProfileMenu = ref(false)
-
 
 const isLoggedIn = ref(false)
 const currentUser = ref(null)
 const isLoadingInitial = ref(true)
 const apiError = ref('')
 
-
 const apiRecipes = ref([])
 const likedRecipeIds = ref(new Set())
-
 
 const api = {
   async request(endpoint, options = {}) {
@@ -342,11 +346,14 @@ const api = {
     return this.request(`/recipe/${id}/like`, { method: 'DELETE' });
   },
 
+  async getUserInfo() {
+    return this.request('/me');
+  },
+
   async logout() {
     return this.request('/logout', { method: 'GET' });
   }
 };
-
 
 function convertBackendRecipe(backendRecipe) {
   return {
@@ -375,7 +382,7 @@ function parseTime(timeString) {
 }
 
 function mapDifficulty(difficultyNumber) {
-  const map = { 1: 'Easy', 2: 'Med', 3: 'Hard' };
+  const map = { 1: 'Easy', 2: 'Med', 3: 'Hard', 4: 'Hard', 5: 'Hard' };
   return map[difficultyNumber] || 'Easy';
 }
 
@@ -415,7 +422,6 @@ const sampleRecipes = [
     isLiked: true
   }
 ];
-
 
 function getRecipeId(recipe) {
   return recipe.id || recipe._id;
@@ -463,7 +469,6 @@ function isRecipeLiked(recipe) {
   const id = getRecipeId(recipe);
   return likedRecipeIds.value.has(id);
 }
-
 
 const recipes = computed(() => {
   return apiRecipes.value.length > 0 ? apiRecipes.value : sampleRecipes;
@@ -518,29 +523,40 @@ const filteredRecipes = computed(() => {
   return filtered;
 });
 
-
 async function checkAuthStatus() {
-
   try {
+    // First try to get public recipes (this doesn't require auth)
     const response = await api.getAllRecipes();
-
     apiRecipes.value = response.recipes.map(convertBackendRecipe);
     
-
+    // Then try to get liked recipes to check if we're logged in
     try {
       const likedResponse = await api.getLikedRecipes();
       const likedIds = new Set(likedResponse.likedRecipes.map(r => r._id));
       likedRecipeIds.value = likedIds;
       
- 
+      // Update liked status in recipes
       apiRecipes.value.forEach(recipe => {
         recipe.isLiked = likedIds.has(recipe.id);
       });
       
+      // If we got here, we're logged in
       isLoggedIn.value = true;
-      currentUser.value = { username: 'User' };
+      
+      // Get full user info from /me endpoint
+      try {
+        const userInfo = await api.getUserInfo();
+        currentUser.value = userInfo;
+        console.log('User logged in:', userInfo);
+      } catch (error) {
+        console.error('Failed to get user info:', error);
+        // Fallback if something goes wrong
+        currentUser.value = { username: 'User', name: 'User', email: 'user@example.com' };
+      }
       
     } catch (error) {
+      // Not logged in, but we can still show public recipes
+      console.log('Not logged in:', error.message);
       isLoggedIn.value = false;
       currentUser.value = null;
     }
@@ -555,13 +571,12 @@ async function checkAuthStatus() {
     isLoadingInitial.value = false;
   }
 }
-
+ 
 async function retryConnection() {
   isLoadingInitial.value = true;
   apiError.value = '';
   await checkAuthStatus();
 }
-
 
 async function toggleLike(recipe) {
   if (!isLoggedIn.value) {
@@ -581,7 +596,6 @@ async function toggleLike(recipe) {
       likedRecipeIds.value.add(recipeId);
     }
     
-
     recipe.isLiked = !wasLiked;
 
     if (recipe.reviewCount !== undefined) {
@@ -598,15 +612,14 @@ async function toggleLike(recipe) {
 
 function openRecipe(recipe) {
   alert(`Opening recipe: ${getRecipeTitle(recipe)}`);
-  
 }
-
 
 function goToHome() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   showLiked.value = false;
   showProfile.value = false;
   showCreateRecipe.value = false;
+  showLoginPage.value = false; // ADDED: Reset login page
   showProfileMenu.value = false;
   clearFilters();
 }
@@ -619,6 +632,7 @@ function goToCreateRecipe() {
   showCreateRecipe.value = true;
   showLiked.value = false;
   showProfile.value = false;
+  showLoginPage.value = false; // ADDED: Reset login page
   showProfileMenu.value = false;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -632,6 +646,7 @@ function goToLikedRecipes() {
   showLiked.value = true;
   showProfile.value = false;
   showCreateRecipe.value = false;
+  showLoginPage.value = false; // ADDED: Reset login page
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -650,6 +665,7 @@ function goToProfile() {
   showProfile.value = true;
   showLiked.value = false;
   showCreateRecipe.value = false;
+  showLoginPage.value = false; // ADDED: Reset login page
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -657,24 +673,49 @@ function toggleProfileMenu() {
   showProfileMenu.value = !showProfileMenu.value;
 }
 
-// Auth UI functions - connect these to your existing login/register components
+// UPDATED: Auth UI functions
 function showLogin() {
-  
-  console.log('Show login modal');
-
+  showLoginPage.value = true; // UPDATED: Show login page instead of redirect
 }
 
 function showRegister() {
-
-  console.log('Show register modal');
-
+  showLoginPage.value = true; // UPDATED: Show login page instead of console.log
 }
 
+// ADDED: New navigation functions
+function goBackToHome() {
+  showLoginPage.value = false;
+}
 
+async function handleLoginFromRegister(userData) {
+  isLoggedIn.value = true;
+  showLoginPage.value = false;
+  
+  // Get full user info from the /me endpoint
+  try {
+    const userInfo = await api.getUserInfo();
+    currentUser.value = userInfo;
+    console.log('Got user info:', userInfo);
+  } catch (error) {
+    console.error('Failed to get user info:', error);
+    // Fallback to basic data
+    currentUser.value = {
+      username: userData.username,
+      name: userData.username,
+      email: 'user@example.com'
+    };
+  }
+  
+  checkAuthStatus(); // Reload data for authenticated user
+  setTimeout(() => {
+    alert(`Welcome back, ${currentUser.value.name || currentUser.value.username}! 🎉`);
+  }, 500);
+}
+
+// UPDATED: Keep existing function for backward compatibility
 function handleLoginSuccess(userData) {
   isLoggedIn.value = true;
   currentUser.value = userData;
-  
   checkAuthStatus();
 }
 
@@ -688,7 +729,6 @@ async function logout() {
       currentUser.value = null;
       likedRecipeIds.value.clear();
       
-      
       await checkAuthStatus();
       
       alert('Logged out successfully');
@@ -700,13 +740,12 @@ async function logout() {
   }
 }
 
-
 function handleSearch() {
-
+  // Search implementation
 }
 
 function applyFilters() {
-
+  // Filter implementation
 }
 
 function clearFilters() {
@@ -724,7 +763,6 @@ function handleRecipeCreated(newRecipe) {
     alert(`🎉 "${getRecipeTitle(convertedRecipe)}" has been published successfully!`);
   }, 100);
 }
-
 
 function handleClickOutside(event) {
   const profileSection = document.querySelector('.profile-section');
@@ -747,7 +785,6 @@ defineExpose({
   handleLoginSuccess
 });
 </script>
-
 <style>
 
 .profile-avatar img,
