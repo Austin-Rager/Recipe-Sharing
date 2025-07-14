@@ -16,8 +16,11 @@
   
   /* Status Colors */
   --success-color: #10b981;
+  --success-light: #d1fae5;     /* ADD THIS */
+  --success-hover: #059669;     /* ADD THIS */
   --warning-color: #f59e0b;
   --danger-color: #ef4444;
+  --danger-hover: #dc2626;      /* ADD THIS */
   
   /* Difficulty Badge Colors */
   --easy-bg: #d1fae5;
@@ -59,9 +62,32 @@
   --font-size-xl: 1.25rem;
   --font-size-2xl: 1.5rem;
   --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;    /* ADD THIS */
   
   /* Transitions */
   --transition-fast: 150ms ease-in-out;
   --transition-normal: 250ms ease-in-out;
   --transition-slow: 350ms ease-in-out;
+}
+
+/* Add this CSS to your main CSS file - using more specific selectors */
+
+/* Filter Groups Spacing - More Specific Selectors */
+.home-page .sidebar .filters-panel .filter-group {
+  margin-bottom: 32px !important;
+}
+
+.home-page .sidebar .filters-panel .filter-group h4 {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  margin-bottom: 16px !important;
+}
+
+/* Difficulty Filter Spacing - KEEP HORIZONTAL */
+.home-page .sidebar .filters-panel .filter-group .filter-option,
+.home-page .sidebar .filters-panel .filter-group .filter-options {
+  display: flex !important;
+  flex-direction: row !important; /* Keep horizontal */
+  gap: 20px !important; /* More space between Easy, Med, Hard */
+  flex-wrap: wrap !important;
 }
