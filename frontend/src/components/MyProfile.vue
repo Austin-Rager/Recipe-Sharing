@@ -37,14 +37,6 @@
                   <span class="stat-number">{{ userStats.recipesLiked }}</span>
                   <span class="stat-label">Recipes Liked</span>
                 </div>
-                <div class="stat-item">
-                  <span class="stat-number">{{ userStats.followers }}</span>
-                  <span class="stat-label">Followers</span>
-                </div>
-                <div class="stat-item">
-                  <span class="stat-number">{{ userStats.following }}</span>
-                  <span class="stat-label">Following</span>
-                </div>
               </div>
             </div>
           </div>
@@ -90,8 +82,8 @@
                 <button type="button" class="btn-secondary" @click="cancelEdit">
                   Cancel
                 </button>
-                <button type="submit" class="btn-primary">
-                  Save Changes
+                <button type="submit" class="btn-primary" :disabled="isSaving">
+                  {{ isSaving ? 'Saving...' : 'Save Changes' }}
                 </button>
               </div>
             </form>
@@ -135,33 +127,37 @@
             <div class="recipes-grid" v-if="myRecipes.length > 0">
               <div
                 v-for="recipe in myRecipes"
-                :key="recipe.id"
+                :key="getRecipeId(recipe)"
                 class="recipe-card"
                 @click="openRecipe(recipe)"
               >
                 <div class="card-image">
-                  <img :src="recipe.image" :alt="recipe.title" />
+                  <img :src="getRecipeImage(recipe)" :alt="getRecipeTitle(recipe)" />
                   <div class="recipe-actions">
                     <button class="action-btn edit-btn" @click.stop="editRecipe(recipe)">
                       ✏️
                     </button>
-                    <button class="action-btn delete-btn" @click.stop="deleteRecipe(recipe)">
-                      🗑️
+                    <button 
+                      class="action-btn delete-btn" 
+                      @click.stop="deleteRecipe(recipe)"
+                      :disabled="deleteLoading === getRecipeId(recipe)"
+                    >
+                      {{ deleteLoading === getRecipeId(recipe) ? '⏳' : '🗑️' }}
                     </button>
                   </div>
                 </div>
                 <div class="card-content">
-                  <h3>{{ recipe.title }}</h3>
+                  <h3>{{ getRecipeTitle(recipe) }}</h3>
                   <div class="card-meta">
                     <div class="rating">
-                      <span class="stars">{{ '★'.repeat(Math.floor(recipe.rating)) }}{{ '☆'.repeat(5 - Math.floor(recipe.rating)) }}</span>
-                      <span class="rating-count">({{ recipe.reviewCount }})</span>
+                      <span class="stars">{{ '★'.repeat(Math.floor(getRecipeRating(recipe))) }}{{ '☆'.repeat(5 - Math.floor(getRecipeRating(recipe))) }}</span>
+                      <span class="rating-count">({{ getRecipeLikes(recipe) }})</span>
                     </div>
-                    <span class="difficulty" :class="`difficulty-${recipe.difficulty.toLowerCase()}`">
-                      {{ recipe.difficulty }}
+                    <span class="difficulty" :class="`difficulty-${getRecipeDifficulty(recipe).toLowerCase()}`">
+                      {{ getRecipeDifficulty(recipe) }}
                     </span>
                   </div>
-                  <p class="recipe-description">{{ recipe.description }}</p>
+                  <p class="recipe-description">{{ getRecipeDescription(recipe) }}</p>
                 </div>
               </div>
             </div>
@@ -181,31 +177,32 @@
             <div class="recipes-grid" v-if="likedRecipes.length > 0">
               <div
                 v-for="recipe in likedRecipes"
-                :key="recipe.id"
+                :key="getRecipeId(recipe)"
                 class="recipe-card"
                 @click="openRecipe(recipe)"
               >
                 <div class="card-image">
-                  <img :src="recipe.image" :alt="recipe.title" />
+                  <img :src="getRecipeImage(recipe)" :alt="getRecipeTitle(recipe)" />
                   <button
                     class="like-btn liked"
                     @click.stop="toggleLike(recipe)"
+                    :disabled="unlikeLoading === getRecipeId(recipe)"
                   >
-                    ❤️
+                    {{ unlikeLoading === getRecipeId(recipe) ? '⏳' : '❤️' }}
                   </button>
                 </div>
                 <div class="card-content">
-                  <h3>{{ recipe.title }}</h3>
+                  <h3>{{ getRecipeTitle(recipe) }}</h3>
                   <div class="card-meta">
                     <div class="rating">
-                      <span class="stars">{{ '★'.repeat(Math.floor(recipe.rating)) }}{{ '☆'.repeat(5 - Math.floor(recipe.rating)) }}</span>
-                      <span class="rating-count">({{ recipe.reviewCount }})</span>
+                      <span class="stars">{{ '★'.repeat(Math.floor(getRecipeRating(recipe))) }}{{ '☆'.repeat(5 - Math.floor(getRecipeRating(recipe))) }}</span>
+                      <span class="rating-count">({{ getRecipeLikes(recipe) }})</span>
                     </div>
-                    <span class="difficulty" :class="`difficulty-${recipe.difficulty.toLowerCase()}`">
-                      {{ recipe.difficulty }}
+                    <span class="difficulty" :class="`difficulty-${getRecipeDifficulty(recipe).toLowerCase()}`">
+                      {{ getRecipeDifficulty(recipe) }}
                     </span>
                   </div>
-                  <p class="recipe-description">{{ recipe.description }}</p>
+                  <p class="recipe-description">{{ getRecipeDescription(recipe) }}</p>
                   <p class="liked-date">Liked on {{ formatDate(recipe.likedAt) }}</p>
                 </div>
               </div>
@@ -229,21 +226,139 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 
+const API_BASE_URL = 'http://localhost:8080';
 
 const emit = defineEmits(['go-home', 'go-to-liked', 'go-to-create'])
 
+const api = {
+  async request(endpoint, options = {}) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const config = {
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
+    };
+
+    const response = await fetch(url, config);
+    
+    if (response.headers.get('content-type')?.includes('application/json')) {
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP ${response.status}`);
+      }
+      return data;
+    } else {
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `HTTP ${response.status}`);
+      }
+      return { success: true };
+    }
+  },
+
+  async getUserInfo() {
+    return this.request('/me');
+  },
+
+  async getUserRecipes() {
+    return this.request('/users-recipes');
+  },
+
+  async getLikedRecipes() {
+    return this.request('/user/liked-recipes');
+  },
+
+  async unlikeRecipe(id) {
+    return this.request(`/recipe/${id}/like`, { method: 'DELETE' });
+  },
+
+  async deleteRecipe(id) {
+    return this.request(`/recipe/${id}`, { method: 'DELETE' });
+  }
+};
+
+function convertBackendRecipe(backendRecipe) {
+  return {
+    id: backendRecipe._id,
+    title: backendRecipe.name,
+    description: backendRecipe.description || "Delicious recipe",
+    image: backendRecipe.images?.length > 0 
+      ? backendRecipe.images[0].url 
+      : "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400",
+    rating: backendRecipe.rating || 4.0,
+    reviewCount: backendRecipe.likes || 0,
+    cookTime: parseTime(backendRecipe.time),
+    difficulty: mapDifficulty(backendRecipe.difficulty),
+    creator: backendRecipe.creator,
+    ingredients: backendRecipe.ingredients,
+    instructions: backendRecipe.instructions,
+    _original: backendRecipe
+  };
+}
+
+function parseTime(timeString) {
+  if (!timeString) return 30;
+  const match = timeString.match(/(\d+)/);
+  return match ? parseInt(match[1]) : 30;
+}
+
+function mapDifficulty(difficultyNumber) {
+  const map = { 1: 'Easy', 2: 'Med', 3: 'Hard', 4: 'Hard', 5: 'Hard' };
+  return map[difficultyNumber] || 'Easy';
+}
+
+function getRecipeId(recipe) {
+  return recipe.id || recipe._id;
+}
+
+function getRecipeTitle(recipe) {
+  return recipe.title || recipe.name;
+}
+
+function getRecipeDescription(recipe) {
+  return recipe.description || "Delicious recipe";
+}
+
+function getRecipeImage(recipe) {
+  if (recipe.image) return recipe.image;
+  if (recipe.images?.length > 0) return recipe.images[0].url;
+  return "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400";
+}
+
+function getRecipeRating(recipe) {
+  return recipe.rating || 4.0;
+}
+
+function getRecipeLikes(recipe) {
+  return recipe.reviewCount || recipe.likes || 0;
+}
+
+function getRecipeDifficulty(recipe) {
+  if (recipe.difficulty && typeof recipe.difficulty === 'string') {
+    return recipe.difficulty;
+  }
+  if (recipe.difficulty && typeof recipe.difficulty === 'number') {
+    return mapDifficulty(recipe.difficulty);
+  }
+  return 'Easy';
+}
 
 const currentUser = ref({
-  name: 'Julia Souza',
-  email: 'julia@flavorcraft.com',
-  bio: 'Passionate home chef who loves experimenting with flavors and creating delicious memories in the kitchen.',
-  joinedDate: 'January 2024'
+  name: '',
+  email: '',
+  username: '',
+  bio: '',
+  joinedDate: 'Recently'
 })
-
 
 const editMode = ref(false)
 const activeTab = ref('recipes')
-
+const isSaving = ref(false)
+const deleteLoading = ref(null)
+const unlikeLoading = ref(null)
 
 const editForm = ref({
   name: '',
@@ -251,60 +366,62 @@ const editForm = ref({
   bio: ''
 })
 
-
 const userStats = ref({
-  recipesCreated: 12,
-  recipesLiked: 34,
-  followers: 128,
-  following: 89
+  recipesCreated: 0,
+  recipesLiked: 0
 })
 
-const myRecipes = ref([
-  {
-    id: 101,
-    title: "Julia's Famous Lasagna",
-    description: "My grandmother's secret recipe",
-    image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=300",
-    rating: 4.8,
-    reviewCount: 23,
-    cookTime: 90,
-    difficulty: "Med"
-  },
-  {
-    id: 102,
-    title: "Chocolate Lava Cake",
-    description: "Decadent dessert for special occasions",
-    image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=300",
-    rating: 4.9,
-    reviewCount: 15,
-    cookTime: 45,
-    difficulty: "Hard"
-  }
-])
-
-
+const myRecipes = ref([])
 const likedRecipes = ref([])
-
 
 const joinedDate = computed(() => {
   return currentUser.value.joinedDate || 'Recently'
 })
 
-// dicebear stuff
-// dicebear v6 'glass' avatar URL
+async function loadUserData() {
+  try {
+    const userInfo = await api.getUserInfo();
+    currentUser.value = {
+      ...userInfo,
+      joinedDate: 'January 2024'
+    };
+    console.log('Loaded user info:', userInfo);
+  } catch (error) {
+    console.error('Failed to load user info:', error);
+  }
+}
+
+async function loadMyRecipes() {
+  try {
+    const response = await api.getUserRecipes();
+    myRecipes.value = response.recipes.map(convertBackendRecipe);
+    userStats.value.recipesCreated = myRecipes.value.length;
+    console.log('Loaded my recipes:', myRecipes.value.length);
+  } catch (error) {
+    console.error('Failed to load my recipes:', error);
+    myRecipes.value = [];
+  }
+}
+
+async function loadLikedRecipes() {
+  try {
+    const response = await api.getLikedRecipes();
+    likedRecipes.value = response.likedRecipes.map(recipe => ({
+      ...convertBackendRecipe(recipe),
+      likedAt: new Date()
+    }));
+    userStats.value.recipesLiked = likedRecipes.value.length;
+    console.log('Loaded liked recipes:', likedRecipes.value.length);
+  } catch (error) {
+    console.error('Failed to load liked recipes:', error);
+    likedRecipes.value = [];
+  }
+}
+
 function getAvatarUrl(seed, style = 'thumbs', size = 200) {
   const cleanSeed = encodeURIComponent(seed.toLowerCase().replace(/\s/g, ''))
   return `https://api.dicebear.com/9.x/${style}/png?seed=${cleanSeed}&size=${size}`
 }
-
-
-
-
-console.log(getAvatarUrl(currentUser.value.name || currentUser.value.email || 'default', 'thumbs'))
-
-
-
-
 
 function toggleEditMode() {
   if (!editMode.value) {
@@ -317,15 +434,26 @@ function toggleEditMode() {
   editMode.value = !editMode.value
 }
 
-function saveProfile() {
-  currentUser.value = {
-    ...currentUser.value,
-    name: editForm.value.name,
-    email: editForm.value.email,
-    bio: editForm.value.bio
+async function saveProfile() {
+  try {
+    isSaving.value = true;
+    
+    currentUser.value = {
+      ...currentUser.value,
+      name: editForm.value.name,
+      email: editForm.value.email,
+      bio: editForm.value.bio
+    }
+    
+    editMode.value = false
+    console.log('Profile saved')
+    alert('Profile updated successfully!');
+  } catch (error) {
+    console.error('Failed to save profile:', error);
+    alert('Failed to save profile. Please try again.');
+  } finally {
+    isSaving.value = false;
   }
-  editMode.value = false
-  console.log('Profile saved')
 }
 
 function cancelEdit() {
@@ -333,26 +461,57 @@ function cancelEdit() {
   editForm.value = { name: '', email: '', bio: '' }
 }
 
-
 function openRecipe(recipe) {
-  console.log('Opening recipe:', recipe.title)
+  console.log('Opening recipe:', getRecipeTitle(recipe))
+  alert(`Opening recipe: ${getRecipeTitle(recipe)}`)
 }
 
 function editRecipe(recipe) {
-  console.log('Editing recipe:', recipe.title)
+  console.log('Editing recipe:', getRecipeTitle(recipe))
+  alert(`Edit functionality would open for: ${getRecipeTitle(recipe)}`)
 }
 
-function deleteRecipe(recipe) {
-  if (confirm(`Delete "${recipe.title}"?`)) {
-    myRecipes.value = myRecipes.value.filter(r => r.id !== recipe.id)
-    console.log('Recipe deleted')
+async function deleteRecipe(recipe) {
+  const recipeId = getRecipeId(recipe);
+  const recipeTitle = getRecipeTitle(recipe);
+  
+  if (confirm(`Delete "${recipeTitle}"?`)) {
+    try {
+      deleteLoading.value = recipeId;
+      
+      myRecipes.value = myRecipes.value.filter(r => getRecipeId(r) !== recipeId);
+      userStats.value.recipesCreated = myRecipes.value.length;
+      
+      console.log('Recipe deleted:', recipeTitle);
+      alert('Recipe deleted successfully!');
+    } catch (error) {
+      console.error('Failed to delete recipe:', error);
+      alert('Failed to delete recipe. Please try again.');
+    } finally {
+      deleteLoading.value = null;
+    }
   }
 }
 
-function toggleLike(recipe) {
-  likedRecipes.value = likedRecipes.value.filter(r => r.id !== recipe.id)
-  localStorage.setItem('likedRecipes', JSON.stringify(likedRecipes.value))
-  console.log('Recipe unliked')
+async function toggleLike(recipe) {
+  const recipeId = getRecipeId(recipe);
+  const recipeTitle = getRecipeTitle(recipe);
+  
+  try {
+    unlikeLoading.value = recipeId;
+    
+    await api.unlikeRecipe(recipeId);
+    
+    likedRecipes.value = likedRecipes.value.filter(r => getRecipeId(r) !== recipeId);
+    userStats.value.recipesLiked = likedRecipes.value.length;
+    
+    console.log('Recipe unliked:', recipeTitle);
+  } catch (error) {
+    console.error('Failed to unlike recipe:', error);
+    alert('Failed to unlike recipe. Please try again.');
+  } finally {
+    unlikeLoading.value = null;
+  }
 }
 
 function goToHome() {
@@ -362,7 +521,6 @@ function goToHome() {
 function goToCreateRecipe() {
   emit('go-to-create')
 }
-
 
 function formatDate(dateString) {
   if (!dateString) return 'Recently'
@@ -381,17 +539,11 @@ function formatDate(dateString) {
   }
 }
 
-//load recipes
-function loadLikedRecipes() {
-  const stored = localStorage.getItem('likedRecipes')
-  if (stored) {
-    likedRecipes.value = JSON.parse(stored)
-  }
-}
-
-onMounted(() => {
-  loadLikedRecipes()
+onMounted(async () => {
   console.log('Profile page loaded')
+  await loadUserData()
+  await loadMyRecipes()
+  await loadLikedRecipes()
 })
 </script>
 
