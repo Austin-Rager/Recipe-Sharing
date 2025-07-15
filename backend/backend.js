@@ -24,7 +24,7 @@ const {Account, Recipe} = require("./model.js");
 
 const app = express();
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], 
+  origin: 'http://localhost:5173', 
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -443,6 +443,54 @@ app.put("/recipe/:id", async (req, res) => {
         if (error.name === 'ValidationError') return res.status(400).json({ error: error.message });
         if (error.name === 'CastError') return res.status(400).json({ error: "Invalid recipe ID" });
         res.status(500).json({ error: "Failed to update recipe" });
+    }
+});
+
+// Delete a recipe if user is the owner
+app.delete("/recipe/:id", async (req, res) => {
+    if (!req.session.session_username) {
+        return res.status(401).json({ error: "Must be logged in to delete recipe" });
+    }
+
+    try {
+        const recipeId = req.params.id;
+        const username = req.session.session_username;
+
+        const recipe = await Recipe.findById(recipeId);
+        if (!recipe) {
+            return res.status(404).json({ error: "Recipe not found" });
+        }
+
+        if (recipe.creator !== username) {
+            return res.status(403).json({ error: "You can only delete your own recipes" });
+        }
+
+        // Delete images from S3 if they exist
+        if (recipe.images && recipe.images.length > 0) {
+            const deletePromises = recipe.images.map(image => {
+                const deleteParams = {
+                    Bucket: process.env.AWS_S3_BUCKET_NAME,
+                    Key: image.key
+                };
+                return s3.deleteObject(deleteParams).promise();
+            });
+
+            await Promise.all(deletePromises);
+        }
+
+        // Remove this recipe from users' likedRecipes lists
+        await Account.updateMany(
+            { "likedRecipes.recipeId": recipeId },
+            { $pull: { likedRecipes: { recipeId } } }
+        );
+
+        // Delete the recipe document
+        await Recipe.findByIdAndDelete(recipeId);
+
+        res.status(200).json({ message: "Recipe deleted successfully" });
+    } catch (error) {
+        console.error("Delete recipe error:", error);
+        res.status(500).json({ error: "Failed to delete recipe" });
     }
 });
 
