@@ -62,10 +62,6 @@ const recipeToDelete = ref(null);
 // Navbar reactive data
 const searchQuery = ref('');
 const showProfileMenu = ref(false);
-const currentUser = ref({
-  name: 'Julia Souza',
-  email: 'julia@flavorcraft.com'
-});
 
 // Load user recipes
   async function loadUserRecipes() {
@@ -189,78 +185,7 @@ onUnmounted(() => {
 
 <template>
   <div class="my-recipes-page">
-    <nav class="navbar">
-      <div class="nav-content">
-        <h1 class="logo">🍳 FlavorCraft</h1>
-        
-        <div class="nav-center">
-          <div class="search-bar">
-            <input
-              type="text"
-              placeholder="Search recipes..."
-              v-model="searchQuery"
-              @input="handleSearch"
-            />
-            <span class="search-icon">🔍</span>
-          </div>
-        </div>
-        
-        <div class="nav-actions">
-          <div class="nav-buttons">
-            <button class="nav-btn home-btn" @click="goToHome">
-              Home
-            </button>
-            <button class="nav-btn liked-btn" @click="goToLikedRecipes">
-              My Liked
-            </button>
-            <button class="nav-btn create-btn" @click="goToCreateRecipe">
-              Create Recipe
-            </button>
-          </div>
-
-          <div class="profile-section" v-if="currentUser">
-            <div class="profile-menu" @click="toggleProfileMenu">
-              <div class="profile-avatar">
-                <span class="profile-icon">👤</span>
-              </div>
-              <span class="profile-name">{{ currentUser.name || 'User' }}</span>
-              <span class="dropdown-arrow">▼</span>
-            </div>
-
-            <div class="profile-dropdown" v-if="showProfileMenu">
-              <div class="profile-dropdown-header">
-                <div class="profile-avatar-large">
-                  <span class="profile-icon-large">👤</span>
-                </div>
-                <div class="profile-info">
-                  <h4>{{ currentUser.name || 'User' }}</h4>
-                  <p>{{ currentUser.email || 'user@example.com' }}</p>
-                </div>
-              </div>
-              <div class="profile-dropdown-menu">
-                <button class="dropdown-item" @click="goToProfile">
-                  My Profile
-                </button>
-                <button class="dropdown-item" @click="goToLikedRecipes">
-                  Liked Recipes
-                </button>
-                <button class="dropdown-item" @click="goToMyRecipes">
-                  My Recipes
-                </button>
-                <div class="dropdown-divider"></div>
-                <button class="dropdown-item logout" @click="logout">
-                  Logout
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div v-else class="profile-loading">
-            <div class="loading-spinner">⟳</div>
-          </div>
-        </div>
-      </div>
-    </nav>
+    
 
     <div class="page-header">
       <h1>My Recipes</h1>
@@ -293,7 +218,7 @@ onUnmounted(() => {
     <div v-else class="recipes-container">
       <div class="recipes-header">
         <h2>Your Recipes ({{ userRecipes.length }})</h2>
-        <button @click="loadUserRecipes" class="refresh-btn">🔄 Refresh</button>
+        <button @click="loadUserRecipes" class="refresh-btn">Refresh</button>
       </div>
 
       <div class="recipes-grid">
@@ -379,6 +304,7 @@ onUnmounted(() => {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  padding-bottom: 15px;
 }
 
 /* ===== NAVIGATION STYLES ===== */
@@ -645,12 +571,13 @@ onUnmounted(() => {
   font-size: var(--font-size-3xl);
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 .page-header p {
   color: var(--text-secondary);
   font-size: var(--font-size-lg);
+  padding-bottom: 10px;
 }
 
 /* Loading State */
@@ -766,6 +693,7 @@ onUnmounted(() => {
 .recipes-container {
   max-width: 1200px;
   margin: 0 auto;
+  margin-bottom: 30px;
   padding: 0 var(--space-6);
 }
 
@@ -790,6 +718,7 @@ onUnmounted(() => {
   cursor: pointer;
   font-size: var(--font-size-sm);
   transition: all var(--transition-fast);
+  font-weight: bold;
 }
 
 .refresh-btn:hover {

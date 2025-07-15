@@ -138,6 +138,11 @@
           @recipe-created="handleRecipeCreated"
         />
 
+        <MyRecipes 
+          v-else-if="showMyRecipe && isLoggedIn"
+          @go-home="goToHome"
+        />
+
         <!-- Home Content - only shows when no other page is active -->
         <div v-else>
           <div class="main-content">
@@ -279,7 +284,8 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import LikedPage from './components/LikedPage.vue';
 import ProfilePage from './components/MyProfile.vue';
 import CreateRecipePage from './components/CreateRecipe.vue';
-import Register from './components/Register.vue'; 
+import Register from './components/Register.vue';
+import MyRecipes from './components/MyRecipes.vue'; 
 
 
 const API_BASE_URL = 'http://localhost:8080';
@@ -294,6 +300,7 @@ const selectedDifficulties = ref([])
 const minRating = ref('') 
 const maxCookTime = ref('') 
 const showProfileMenu = ref(false)
+const showMyRecipe = ref(false);
 
 const isLoggedIn = ref(false)
 const currentUser = ref(null)
@@ -621,6 +628,7 @@ function goToHome() {
   showCreateRecipe.value = false;
   showLoginPage.value = false; 
   showProfileMenu.value = false;
+  showMyRecipe.value = false;
   clearFilters();
 }
 
@@ -634,6 +642,7 @@ function goToCreateRecipe() {
   showProfile.value = false;
   showLoginPage.value = false; 
   showProfileMenu.value = false;
+  showMyRecipe.value = false;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -647,6 +656,7 @@ function goToLikedRecipes() {
   showProfile.value = false;
   showCreateRecipe.value = false;
   showLoginPage.value = false; 
+  showMyRecipe.value = false;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -656,7 +666,12 @@ function goToMyRecipes() {
     return;
   }
   showProfileMenu.value = false;
-  alert('My recipes page - implement this with your existing component!');
+  showLiked.value = false;
+  showProfile.value = false;
+  showCreateRecipe.value = false;
+  showLoginPage.value = false;
+  showMyRecipe.value = true; 
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function goToProfile() {
@@ -666,6 +681,7 @@ function goToProfile() {
   showLiked.value = false;
   showCreateRecipe.value = false;
   showLoginPage.value = false; 
+  showMyRecipe.value = false;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
