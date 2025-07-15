@@ -11,30 +11,7 @@
       <nav class="navbar">
         <div class="nav-content">
           <h1 class="logo">🍳 FlavorCraft</h1>
-    <Register 
-      v-if="showLoginPage"
-      :showBackButton="true"
-      @login-success="handleLoginFromRegister"
-      @go-back="goBackToHome"
-    />
 
-    
-    <div v-else class="main-app">
-      <nav class="navbar">
-        <div class="nav-content">
-          <h1 class="logo">🍳 FlavorCraft</h1>
-
-          <div class="nav-center">
-            <div class="search-bar">
-              <input
-                type="text"
-                placeholder="Search recipes..."
-                v-model="searchQuery"
-                @input="handleSearch"
-              />
-              <span class="search-icon">🔍</span>
-            </div>
-          </div> 
           <div class="nav-center">
             <div class="search-bar">
               <input
@@ -61,38 +38,7 @@
                 </button>
               </template>
             </div>
-          <div class="nav-actions">
-            <div class="nav-buttons">
-              <button class="nav-btn home-btn" @click="goToHome">
-                Home
-              </button>
-              <template v-if="isLoggedIn">
-                <button class="nav-btn liked-btn" @click="goToLikedRecipes">
-                  My Liked
-                </button>
-                <button class="nav-btn create-btn" @click="goToCreateRecipe">
-                  Create Recipe
-                </button>
-              </template>
-            </div>
 
-
-            <div class="profile-section" v-if="isLoggedIn && currentUser">
-              <div class="profile-menu" @click="toggleProfileMenu">
-                <div class="profile-avatar">
-                  <img
-                    v-if="avatarUrl"
-                    :src="avatarUrl"
-                    alt="User avatar"
-                    class="profile-avatar-img"
-                    loading="lazy"
-                  />
-                  <span v-else class="profile-icon">👤</span>
-                </div>
-                <span class="profile-name">{{ currentUser.name || currentUser.username || 'User' }}</span>
-                <span class="dropdown-arrow">▼</span>
-              </div>
-    
             <div class="profile-section" v-if="isLoggedIn && currentUser">
               <div class="profile-menu" @click="toggleProfileMenu">
                 <div class="profile-avatar">
@@ -143,42 +89,7 @@
                 </div>
               </div>
             </div>
-              <div class="profile-dropdown" v-if="showProfileMenu">
-                <div class="profile-dropdown-header">
-                  <div class="profile-avatar-large">
-                    <img
-                      v-if="avatarUrl"
-                      :src="avatarUrl"
-                      alt="User avatar"
-                      class="profile-avatar-img-large"
-                      loading="lazy"
-                    />
-                    <span v-else class="profile-icon-large">👤</span>
-                  </div>
-                  <div class="profile-info">
-                    <h4>{{ currentUser.name || currentUser.username || 'User' }}</h4>
-                    <p>{{ currentUser.email || 'user@example.com' }}</p>
-                  </div>
-                </div>
-                <div class="profile-dropdown-menu">
-                  <button class="dropdown-item" @click="goToProfile">
-                    My Profile
-                  </button>
-                  <button class="dropdown-item" @click="goToLikedRecipes">
-                    Liked Recipes
-                  </button>
-                  <button class="dropdown-item" @click="goToMyRecipes">
-                    My Recipes
-                  </button>
-                  <div class="dropdown-divider"></div>
-                  <button class="dropdown-item logout" @click="logout">
-                    Logout
-                  </button>
-                </div>
-              </div>
-            </div>
 
-        
             <div v-else class="auth-buttons">
               <button class="nav-btn login-btn" @click="showLogin">
                 Login
@@ -190,24 +101,13 @@
           </div>
         </div>
       </nav>
-    
-            <div v-else class="auth-buttons">
-              <button class="nav-btn login-btn" @click="showLogin">
-                Login
-              </button>
-            </div>
-          </div> 
-        </div> 
-      </nav>
 
       <div class="main-content-area">
-       
         <div v-if="isLoadingInitial" class="loading-container">
           <div class="loading-spinner">⟳</div>
           <p>Loading recipes...</p>
         </div>
 
-        
         <div v-else-if="apiError" class="error-container">
           <div class="error-message">
             <h3>⚠️ Connection Error</h3>
@@ -217,35 +117,6 @@
           </div>
         </div>
 
-     
-        <LikedPage 
-          v-else-if="showLiked && isLoggedIn" 
-          @go-home="goToHome" 
-        />
-        
-        <ProfilePage 
-          v-else-if="showProfile && isLoggedIn" 
-          @go-home="goToHome" 
-          @go-to-create="goToCreateRecipe" 
-        />
-      <div class="main-content-area"> 
-
-        <div v-if="isLoadingInitial" class="loading-container">
-          <div class="loading-spinner">⟳</div>
-          <p>Loading recipes...</p>
-        </div>
-
-        <!-- Error state -->
-        <div v-else-if="apiError" class="error-container">
-          <div class="error-message">
-            <h3>⚠️ Connection Error</h3>
-            <p>{{ apiError }}</p>
-            <p>Showing sample recipes instead.</p>
-            <button @click="retryConnection" class="retry-btn">Retry Connection</button>
-          </div>
-        </div>
-
-        <!-- Your existing page components -->
         <LikedPage 
           v-else-if="showLiked && isLoggedIn" 
           @go-home="goToHome" 
@@ -263,16 +134,11 @@
           @recipe-created="handleRecipeCreated"
         />
 
-<<<<<<< HEAD
-    
-=======
         <MyRecipes 
           v-else-if="showMyRecipe && isLoggedIn"
           @go-home="goToHome"
         />
 
-        <!-- Home Content - only shows when no other page is active -->
->>>>>>> 2041bf0f39c7b5f3cecee9e01b6e585e2242429e
         <div v-else>
           <div class="main-content">
             <div class="recipes-section">
@@ -294,7 +160,6 @@
                 </div>
               </div>
 
-
               <div class="trending-section" v-if="!isSearchActive">
                 <h2>🔥 Trending</h2>
                 <div class="trending-cards">
@@ -311,25 +176,7 @@
                   </div>
                 </div>
               </div>
-              <!-- Trending Section -->
-              <div class="trending-section">
-                <h2>🔥 Trending</h2>
-                <div class="trending-cards">
-                  <div
-                    v-for="trending in trendingRecipes"
-                    :key="getRecipeId(trending)"
-                    class="trending-card"
-                    @click="openRecipe(trending)"
-                  >
-                    <img :src="getRecipeImage(trending)" :alt="getRecipeTitle(trending)">
-                    <div class="trending-content">
-                      <h4>{{ getRecipeTitle(trending) }}</h4>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-             
               <div class="search-results-header" v-if="isSearchActive">
                 <h2>Search Results for "{{ activeSearchQuery }}" ({{ filteredRecipes.length }} found)</h2>
               </div>
@@ -371,7 +218,6 @@
                 </div>
               </div>
 
-             
               <div class="no-search-results" v-if="isSearchActive && filteredRecipes.length === 0">
                 <div class="no-results-icon">🔍</div>
                 <h3>No recipes found</h3>
@@ -382,77 +228,6 @@
               </div>
             </div>
             
-            
-            <div class="sidebar" :class="{open: showFilters}">
-              <div class="filters-panel">
-                <h3>Filters</h3>
-                
-                <div class="filter-group">
-                  <h4>Difficulty</h4>
-                  <div class="filter-option">
-                    <label v-for="level in ['Easy', 'Med', 'Hard']" :key="level">
-                      <input
-                        type="checkbox"
-                        :value="level"
-                        v-model="selectedDifficulties"
-                        @change="applyFilters"
-                      />
-                      {{ level }}
-                    </label>
-                  </div>
-                </div>
-
-                <div class="filter-group">
-                  <h4>Rating</h4>
-                  <div class="rating-filter">
-                    <div v-for="rating in [5,4,3,2,1]" :key="rating" class="rating-option">
-                      <input 
-                        type="radio" 
-                        :value="rating" 
-                        v-model="minRating"
-                        @change="applyFilters"
-                        name="rating"
-                      />
-                      <span class="stars">{{ '★'.repeat(rating) }}{{ '☆'.repeat(5-rating) }}</span>
-                      <span>& up</span>
-                    </div>
-                  </div>
-                </div>
-              <div class="recipes-grid">
-                <div
-                  v-for="recipe in filteredRecipes"
-                  :key="getRecipeId(recipe)"
-                  class="recipe-card"
-                  @click="openRecipe(recipe)"
-                >
-                  <div class="card-image">
-                    <img :src="getRecipeImage(recipe)" :alt="getRecipeTitle(recipe)" />
-                    <button
-                      v-if="isLoggedIn"
-                      class="like-btn"
-                      :class="{ liked: isRecipeLiked(recipe) }"
-                      @click.stop="toggleLike(recipe)"
-                    >
-                      {{ isRecipeLiked(recipe) ? '❤️' : '🤍' }}
-                    </button>
-                  </div>
-                  <div class="card-content">
-                    <h3>{{ getRecipeTitle(recipe) }}</h3>
-                    <div class="card-meta">
-                      <div class="rating">
-                        <span class="stars">{{ '★'.repeat(Math.floor(getRecipeRating(recipe))) }}{{ '☆'.repeat(5 - Math.floor(getRecipeRating(recipe))) }}</span>
-                        <span class="rating-count">({{ getRecipeLikes(recipe) }})</span>
-                      </div>
-                      <span class="difficulty" :class="`difficulty-${getRecipeDifficulty(recipe).toLowerCase()}`">
-                        {{ getRecipeDifficulty(recipe) }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Your existing sidebar -->
             <div class="sidebar" :class="{open: showFilters}">
               <div class="filters-panel">
                 <h3>Filters</h3>
@@ -498,50 +273,19 @@
                     <option value="60">Under 1 hour</option>
                   </select> 
                 </div>
-                <div class="filter-group">
-                  <h4>Cook Time</h4>
-                  <select v-model="maxCookTime" @change="applyFilters">
-                    <option value="">Any time</option>
-                    <option value="15">Under 15 min</option>
-                    <option value="30">Under 30 min</option>
-                    <option value="60">Under 1 hour</option>
-                  </select> 
-                </div>
 
                 <button class="clear-filters" @click="clearFilters">
                   Clear Filters
                 </button>
               </div>
             </div>
-<<<<<<< HEAD
-          </div> 
-        </div> 
-      </div> 
-    </div> 
-  </div> 
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
-=======
-          </div> <!-- fixed: closing .main-content -->
-        </div> <!-- fixed: closing v-else home content -->
-      </div> <!-- fixed: closing .main-content-area -->
-    </div> <!-- fixed: closing .main-app -->
-  </div> <!-- fixed: closing .home-page -->
-                <button class="clear-filters" @click="clearFilters">
-                  Clear Filters
-                </button>
-              </div>
-            </div>
-          </div> <!-- fixed: closing .main-content -->
-        </div> <!-- fixed: closing v-else home content -->
-      </div> <!-- fixed: closing .main-content-area -->
-    </div> <!-- fixed: closing .main-app -->
-  </div> <!-- fixed: closing .home-page -->
-</template>
-
-
-
->>>>>>> 2041bf0f39c7b5f3cecee9e01b6e585e2242429e
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 
@@ -549,11 +293,7 @@ import LikedPage from './components/LikedPage.vue';
 import ProfilePage from './components/MyProfile.vue';
 import CreateRecipePage from './components/CreateRecipe.vue';
 import Register from './components/Register.vue';
-<<<<<<< HEAD
-=======
 import MyRecipes from './components/MyRecipes.vue'; 
-
->>>>>>> 2041bf0f39c7b5f3cecee9e01b6e585e2242429e
 
 const API_BASE_URL = 'http://localhost:8080';
 
@@ -563,14 +303,7 @@ const showFilters = ref(false)
 const showLiked = ref(false) 
 const showProfile = ref(false)
 const showCreateRecipe = ref(false)
-<<<<<<< HEAD
 const showLoginPage = ref(false)
-=======
-const showLoginPage = ref(false) 
-const showProfile = ref(false)
-const showCreateRecipe = ref(false)
-const showLoginPage = ref(false) 
->>>>>>> 2041bf0f39c7b5f3cecee9e01b6e585e2242429e
 const selectedDifficulties = ref([])
 const minRating = ref('') 
 const maxCookTime = ref('') 
@@ -778,7 +511,6 @@ const trendingRecipes = computed(() => {
 
 const filteredRecipes = computed(() => {
   let filtered = recipes.value;
-  let filtered = recipes.value;
 
   if (activeSearchQuery.value) {
     filtered = filtered.filter(recipe => 
@@ -786,27 +518,13 @@ const filteredRecipes = computed(() => {
       getRecipeDescription(recipe).toLowerCase().includes(activeSearchQuery.value.toLowerCase())
     );
   }
-  if (searchQuery.value) {
-    filtered = filtered.filter(recipe => 
-      getRecipeTitle(recipe).toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      getRecipeDescription(recipe).toLowerCase().includes(searchQuery.value.toLowerCase())
-    );
-  }
 
   if (selectedDifficulties.value.length > 0) {
     filtered = filtered.filter(recipe => 
       selectedDifficulties.value.includes(getRecipeDifficulty(recipe))
     );
   }
-  if (selectedDifficulties.value.length > 0) {
-    filtered = filtered.filter(recipe => 
-      selectedDifficulties.value.includes(getRecipeDifficulty(recipe))
-    );
-  }
 
-  if (minRating.value) {
-    filtered = filtered.filter(recipe => getRecipeRating(recipe) >= minRating.value);
-  }
   if (minRating.value) {
     filtered = filtered.filter(recipe => getRecipeRating(recipe) >= minRating.value);
   }
@@ -902,103 +620,9 @@ async function toggleLike(recipe) {
     console.error('Failed to toggle like:', error);
     alert('Failed to update like status');
   }
-  if (maxCookTime.value) {
-    filtered = filtered.filter(recipe => {
-      const cookTime = parseTime(getRecipeTime(recipe));
-      return cookTime <= parseInt(maxCookTime.value);
-    });
-  }
-
-  return filtered;
-});
-
-async function checkAuthStatus() {
-  try {
-    const response = await api.getAllRecipes();
-    apiRecipes.value = response.recipes.map(convertBackendRecipe);
-    
-
-    try {
-      const likedResponse = await api.getLikedRecipes();
-      const likedIds = new Set(likedResponse.likedRecipes.map(r => r._id));
-      likedRecipeIds.value = likedIds;
-      
-   
-      apiRecipes.value.forEach(recipe => {
-        recipe.isLiked = likedIds.has(recipe.id);
-      });
-   
-      isLoggedIn.value = true;
-      
- 
-      try {
-        const userInfo = await api.getUserInfo();
-        currentUser.value = userInfo;
-        console.log('User logged in:', userInfo);
-      } catch (error) {
-        console.error('Failed to get user info:', error);
-  
-        currentUser.value = { username: 'User', name: 'User', email: 'user@example.com' };
-      }
-      
-    } catch (error) {
- 
-      console.log('Not logged in:', error.message);
-      isLoggedIn.value = false;
-      currentUser.value = null;
-    }
-    
-    apiError.value = '';
-  } catch (error) {
-    console.error('Failed to load recipes:', error);
-    apiError.value = error.message;
-    
-    apiRecipes.value = [];
-  } finally {
-    isLoadingInitial.value = false;
-  }
-}
- 
-async function retryConnection() {
-  isLoadingInitial.value = true;
-  apiError.value = '';
-  await checkAuthStatus();
-}
-
-async function toggleLike(recipe) {
-  if (!isLoggedIn.value) {
-    alert('Please log in to like recipes');
-    return;
-  }
-
-  const recipeId = getRecipeId(recipe);
-  const wasLiked = isRecipeLiked(recipe);
-
-  try {
-    if (wasLiked) {
-      await api.unlikeRecipe(recipeId);
-      likedRecipeIds.value.delete(recipeId);
-    } else {
-      await api.likeRecipe(recipeId);
-      likedRecipeIds.value.add(recipeId);
-    }
-    
-    recipe.isLiked = !wasLiked;
-
-    if (recipe.reviewCount !== undefined) {
-      recipe.reviewCount += wasLiked ? -1 : 1;
-    } else if (recipe._original?.likes !== undefined) {
-      recipe._original.likes += wasLiked ? -1 : 1;
-    }
-    
-  } catch (error) {
-    console.error('Failed to toggle like:', error);
-    alert('Failed to update like status');
-  }
 }
 
 function openRecipe(recipe) {
-  alert(`Opening recipe: ${getRecipeTitle(recipe)}`);
   alert(`Opening recipe: ${getRecipeTitle(recipe)}`);
 }
 
@@ -1045,12 +669,8 @@ function goToLikedRecipes() {
   showLiked.value = true;
   showProfile.value = false;
   showCreateRecipe.value = false;
-<<<<<<< HEAD
   showLoginPage.value = false;
-=======
-  showLoginPage.value = false; 
   showMyRecipe.value = false;
->>>>>>> 2041bf0f39c7b5f3cecee9e01b6e585e2242429e
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1074,17 +694,12 @@ function goToProfile() {
   showProfile.value = true;
   showLiked.value = false;
   showCreateRecipe.value = false;
-<<<<<<< HEAD
   showLoginPage.value = false;
-=======
-  showLoginPage.value = false; 
   showMyRecipe.value = false;
->>>>>>> 2041bf0f39c7b5f3cecee9e01b6e585e2242429e
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function toggleProfileMenu() {
-  showProfileMenu.value = !showProfileMenu.value;
   showProfileMenu.value = !showProfileMenu.value;
 }
 
@@ -1169,93 +784,6 @@ function handleRecipeCreated(newRecipe) {
   setTimeout(() => {
     alert(`🎉 "${getRecipeTitle(convertedRecipe)}" has been published successfully!`);
   }, 100);
-function showLogin() {
-  showLoginPage.value = true; 
-}
-
-function showRegister() {
-  showLoginPage.value = true; 
-}
-
-
-function goBackToHome() {
-  showLoginPage.value = false;
-}
-
-async function handleLoginFromRegister(userData) {
-  isLoggedIn.value = true;
-  showLoginPage.value = false;
-  
-
-  try {
-    const userInfo = await api.getUserInfo();
-    currentUser.value = userInfo;
-    console.log('Got user info:', userInfo);
-  } catch (error) {
-    console.error('Failed to get user info:', error);
-
-    currentUser.value = {
-      username: userData.username,
-      name: userData.username,
-      email: 'user@example.com'
-    };
-  }
-  
-  checkAuthStatus();
-  setTimeout(() => {
-    alert(`Welcome back, ${currentUser.value.name || currentUser.value.username}! 🎉`);
-  }, 500);
-}
-
-function handleLoginSuccess(userData) {
-  isLoggedIn.value = true;
-  currentUser.value = userData;
-  checkAuthStatus();
-}
-
-async function logout() {
-  showProfileMenu.value = false;
-  
-  if (confirm('Are you sure you want to logout?')) {
-    try {
-      await api.logout();
-      isLoggedIn.value = false;
-      currentUser.value = null;
-      likedRecipeIds.value.clear();
-      
-      await checkAuthStatus();
-      
-      alert('Logged out successfully');
-      goToHome();
-    } catch (error) {
-      console.error('Logout failed:', error);
-      alert('Logout failed');
-    }
-  }
-}
-
-function handleSearch() {
-
-}
-
-function applyFilters() {
-
-}
-
-function clearFilters() {
-  selectedDifficulties.value = [];
-  minRating.value = '';
-  maxCookTime.value = '';
-  searchQuery.value = '';
-}
-
-function handleRecipeCreated(newRecipe) {
-  const convertedRecipe = convertBackendRecipe(newRecipe);
-  apiRecipes.value.unshift(convertedRecipe);
-  
-  setTimeout(() => {
-    alert(`🎉 "${getRecipeTitle(convertedRecipe)}" has been published successfully!`);
-  }, 100);
 }
 
 function handleClickOutside(event) {
@@ -1263,17 +791,9 @@ function handleClickOutside(event) {
   if (profileSection && !profileSection.contains(event.target)) {
     showProfileMenu.value = false;
   }
-  const profileSection = document.querySelector('.profile-section');
-  if (profileSection && !profileSection.contains(event.target)) {
-    showProfileMenu.value = false;
-  }
 }
 
 onMounted(() => {
-  console.log('Home page loaded');
-  document.addEventListener('click', handleClickOutside);
-  checkAuthStatus();
-});
   console.log('Home page loaded');
   document.addEventListener('click', handleClickOutside);
   checkAuthStatus();
@@ -1286,15 +806,9 @@ onUnmounted(() => {
 defineExpose({
   handleLoginSuccess
 });
-  document.removeEventListener('click', handleClickOutside);
-});
-
-defineExpose({
-  handleLoginSuccess
-});
 </script>
-<style>
 
+<style>
 .profile-avatar img,
 .profile-avatar-large img {
   width: 100%;
@@ -1304,11 +818,11 @@ defineExpose({
   display: block;
 }
 
-/* Remove background when image loads */
 .profile-avatar:has(img),
 .profile-avatar-large:has(img) {
   background: transparent !important;
 }
+
 .profile-avatar-img {
   width: 36px;
   height: 36px;
@@ -1323,24 +837,6 @@ defineExpose({
   object-fit: cover;
 }
 
-.profile-avatar-img {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  object-fit: cover;
-  display: block;
-}
-
-.profile-avatar-img-large {
-  width: 60px;
-  height: 60px;
-  border-radius: var(--radius-full);
-  object-fit: cover;
-  display: block;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-}
-
-/* Reset and Base Styles */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -1355,13 +851,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Main Container */
 .home-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
 }
 
-/* ===== NAVIGATION STYLES ===== */
 .nav-content {
   max-width: 1400px;
   margin: 0 auto;
@@ -1382,7 +876,6 @@ body {
   gap: var(--space-2);
 }
 
-/* Search Bar */
 .nav-center {
   display: flex;
   justify-content: center;
@@ -1427,7 +920,6 @@ body {
   font-size: var(--font-size-lg);
 }
 
-/* Navigation Actions */
 .nav-actions {
   display: flex;
   align-items: center;
@@ -1470,7 +962,6 @@ body {
   color: white;
 }
 
-/* ===== PROFILE SECTION ===== */
 .profile-section {
   position: relative;
   margin-left: var(--space-4);
@@ -1522,7 +1013,6 @@ body {
   transform: rotate(180deg);
 }
 
-/* Profile Dropdown */
 .profile-dropdown {
   position: absolute;
   top: calc(100% + var(--space-2));
@@ -1588,7 +1078,6 @@ body {
   color: var(--danger-color);
 }
 
-/* ===== MAIN CONTENT LAYOUT ===== */
 .main-content {
   max-width: 1200px;
   margin: 0 auto;
@@ -1604,7 +1093,6 @@ body {
   gap: var(--space-8);
 }
 
-/* ===== RECIPE CARDS ===== */
 .recipe-of-day h2,
 .trending-section h2 {
   font-size: var(--font-size-3xl);
@@ -1684,7 +1172,6 @@ body {
   gap: var(--space-1);
 }
 
-/* Trending Cards */
 .trending-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -1721,7 +1208,6 @@ body {
   color: var(--text-primary);
 }
 
-/* Recipe Grid */
 .recipes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -1821,7 +1307,6 @@ body {
   color: var(--hard-text);
 }
 
-/* ===== SIDEBAR ===== */
 .sidebar {
   background: var(--background-primary);
   border-radius: var(--radius-2xl);
@@ -1850,37 +1335,22 @@ body {
 }
 
 .filter-options {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 12px !important; /* Space between Easy, Med, Hard */
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 12px !important; /* Space between Easy, Med, Hard */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-filter-options label {
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important; /* Space between checkbox and text */
-  font-size: 15px !important;
-  cursor: pointer !important;
-  padding: 8px 12px !important;
-  border-radius: 6px !important;
-  transition: background-color 150ms ease-in-out !important;
-  margin-bottom: 0 !important;
-filter-options label {
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important; /* Space between checkbox and text */
-  font-size: 15px !important;
-  cursor: pointer !important;
-  padding: 8px 12px !important;
-  border-radius: 6px !important;
-  transition: background-color 150ms ease-in-out !important;
-  margin-bottom: 0 !important;
+.filter-options label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background-color 150ms ease-in-out;
+  margin-bottom: 0;
 }
-
-
 
 .filter-options label:hover {
   background: var(--background-secondary);
@@ -1928,7 +1398,6 @@ filter-options label {
   color: var(--text-primary);
 }
 
-/* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 1200px) {
   .nav-content {
     gap: var(--space-6);
@@ -2015,7 +1484,6 @@ filter-options label {
   }
 }
 
-/* ===== ACCESSIBILITY ===== */
 .recipe-card:focus,
 .trending-card:focus,
 .featured-card:focus,
