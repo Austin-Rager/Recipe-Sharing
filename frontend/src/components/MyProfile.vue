@@ -547,7 +547,7 @@ onMounted(async () => {
 })
 </script>
 
-<style>
+<style scoped>
 /* ===== PROFILE PAGE STYLES ===== */
 .profile-page {
   padding: var(--space-8) var(--space-6);
@@ -661,7 +661,7 @@ onMounted(async () => {
 
 .profile-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-6);
   margin-top: var(--space-6);
 }
@@ -772,10 +772,16 @@ onMounted(async () => {
   color: white;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: var(--primary-hover);
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
+}
+
+.btn-primary:disabled {
+  background: var(--text-muted);
+  cursor: not-allowed;
+  transform: none;
 }
 
 .btn-secondary {
@@ -927,6 +933,11 @@ onMounted(async () => {
   transform: scale(1.1);
 }
 
+.action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 .edit-btn:hover {
   background: #e0f2fe;
 }
@@ -955,6 +966,11 @@ onMounted(async () => {
 
 .like-btn:hover {
   transform: scale(1.1);
+}
+
+.like-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .like-btn.liked {
@@ -1060,6 +1076,7 @@ onMounted(async () => {
   color: var(--text-secondary);
   margin-bottom: var(--space-6);
 }
+
 /* Navigation avatar styles */
 .nav-avatar-image,
 .dropdown-avatar-image,
@@ -1089,6 +1106,7 @@ onMounted(async () => {
   color: transparent;
   overflow: hidden;
 }
+
 /* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 1024px) {
   .profile-page {
@@ -1213,6 +1231,4 @@ onMounted(async () => {
     transition-duration: 0.01ms !important;
   }
 }
-
-  
 </style>
