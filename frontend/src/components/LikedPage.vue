@@ -1,5 +1,4 @@
 <template>
-<!--FIX HOME PAGE SHOWING UP -->
   <div class="liked-page">
 
     <!-- search and filters -->
@@ -62,32 +61,33 @@
     <div class="liked-recipes-grid" v-if="filteredLikedRecipes.length > 0">
       <div 
         v-for="recipe in filteredLikedRecipes" 
-        :key="recipe.id"
+        :key="getRecipeId(recipe)"
         class="recipe-card"
         @click="openRecipe(recipe)"
       >
         <div class="card-image">
-          <img :src="recipe.image" :alt="recipe.title" />
+          <img :src="getRecipeImage(recipe)" :alt="getRecipeTitle(recipe)" />
           <button 
             class="like-btn liked"
+            :disabled="unlikeLoading === getRecipeId(recipe)"
             @click.stop="toggleLike(recipe)"
           >
-            ❤️
+            {{ unlikeLoading === getRecipeId(recipe) ? '⏳' : '❤️' }}
           </button>
         </div>
         <div class="card-content">
-          <h3>{{ recipe.title }}</h3>
+          <h3>{{ getRecipeTitle(recipe) }}</h3>
           <div class="card-meta">
             <div class="rating">
-              <span class="stars">{{ '★'.repeat(Math.floor(recipe.rating)) }}{{ '☆'.repeat(5 - Math.floor(recipe.rating)) }}</span>
-              <span class="rating-count">({{ recipe.reviewCount }})</span>
+              <span class="stars">{{ '★'.repeat(Math.floor(getRecipeRating(recipe))) }}{{ '☆'.repeat(5 - Math.floor(getRecipeRating(recipe))) }}</span>
+              <span class="rating-count">({{ getRecipeLikes(recipe) }})</span>
             </div>
-            <span class="difficulty" :class="`difficulty-${recipe.difficulty.toLowerCase()}`">
-              {{ recipe.difficulty }}
+            <span class="difficulty" :class="`difficulty-${getRecipeDifficulty(recipe).toLowerCase()}`">
+              {{ getRecipeDifficulty(recipe) }}
             </span>
           </div>
           <div class="recipe-stats">
-            <span class="cook-time">⏱️ {{ recipe.cookTime }}min</span>
+            <span class="cook-time">⏱️ {{ getRecipeTime(recipe) }}</span>
             <span class="liked-date">Liked {{ formatLikedDate(recipe.likedAt) }}</span>
           </div>
         </div>
@@ -113,9 +113,123 @@ export default {
   name: 'LikedPage',
   emits: ['go-home', 'open-recipe'],
   setup(props, { emit }) {
+
+    const API_BASE_URL = 'http://localhost:8080';
+    
     const likedRecipes = ref([])
     const searchQuery = ref('')
     const selectedDifficulty = ref('')
+    const unlikeLoading = ref(null) 
+
+
+    const api = {
+      async request(endpoint, options = {}) {
+        const url = `${API_BASE_URL}${endpoint}`;
+        const config = {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+          },
+          ...options
+        };
+
+        const response = await fetch(url, config);
+        
+        if (response.headers.get('content-type')?.includes('application/json')) {
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || `HTTP ${response.status}`);
+          }
+          return data;
+        } else {
+          if (!response.ok) {
+            const text = await response.text();
+            throw new Error(text || `HTTP ${response.status}`);
+          }
+          return { success: true };
+        }
+      },
+
+      async getLikedRecipes() {
+        return this.request('/user/liked-recipes');
+      },
+
+      async unlikeRecipe(id) {
+        return this.request(`/recipe/${id}/like`, { method: 'DELETE' });
+      }
+    };
+
+    function convertBackendRecipe(backendRecipe) {
+      return {
+        id: backendRecipe._id,
+        title: backendRecipe.name,
+        description: backendRecipe.description || "Delicious recipe",
+        image: backendRecipe.images?.length > 0 
+          ? backendRecipe.images[0].url 
+          : "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400",
+        rating: backendRecipe.rating || 4.0,
+        reviewCount: backendRecipe.likes || 0,
+        cookTime: parseTime(backendRecipe.time),
+        difficulty: mapDifficulty(backendRecipe.difficulty),
+        isLiked: true, 
+        creator: backendRecipe.creator,
+        ingredients: backendRecipe.ingredients,
+        instructions: backendRecipe.instructions,
+        likedAt: new Date(), 
+        _original: backendRecipe
+      };
+    }
+
+    function parseTime(timeString) {
+      if (!timeString) return 30;
+      const match = timeString.match(/(\d+)/);
+      return match ? parseInt(match[1]) : 30;
+    }
+
+    function mapDifficulty(difficultyNumber) {
+      const map = { 1: 'Easy', 2: 'Med', 3: 'Hard', 4: 'Hard', 5: 'Hard' };
+      return map[difficultyNumber] || 'Easy';
+    }
+
+   
+    function getRecipeId(recipe) {
+      return recipe.id || recipe._id;
+    }
+
+    function getRecipeTitle(recipe) {
+      return recipe.title || recipe.name;
+    }
+
+    function getRecipeImage(recipe) {
+      if (recipe.image) return recipe.image;
+      if (recipe.images?.length > 0) return recipe.images[0].url;
+      return "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400";
+    }
+
+    function getRecipeRating(recipe) {
+      return recipe.rating || 4.0;
+    }
+
+    function getRecipeLikes(recipe) {
+      return recipe.reviewCount || recipe.likes || 0;
+    }
+
+    function getRecipeTime(recipe) {
+      if (recipe.cookTime) return `${recipe.cookTime}min`;
+      if (recipe.time) return recipe.time;
+      return "30min";
+    }
+
+    function getRecipeDifficulty(recipe) {
+      if (recipe.difficulty && typeof recipe.difficulty === 'string') {
+        return recipe.difficulty;
+      }
+      if (recipe.difficulty && typeof recipe.difficulty === 'number') {
+        return mapDifficulty(recipe.difficulty);
+      }
+      return 'Easy';
+    }
 
     //filters
     const filteredLikedRecipes = computed(() => {
@@ -124,40 +238,57 @@ export default {
       if (searchQuery.value.trim()) {
         const query = searchQuery.value.toLowerCase()
         filtered = filtered.filter(recipe => 
-          recipe.title.toLowerCase().includes(query)
+          getRecipeTitle(recipe).toLowerCase().includes(query) ||
+          (recipe.description && recipe.description.toLowerCase().includes(query))
         )
       }
 
       if (selectedDifficulty.value) {
         filtered = filtered.filter(recipe => 
-          recipe.difficulty.toLowerCase() === selectedDifficulty.value.toLowerCase()
+          getRecipeDifficulty(recipe).toLowerCase() === selectedDifficulty.value.toLowerCase()
         )
       }
 
       return filtered
     })
 
-    const loadLikedRecipes = () => {
-      const stored = localStorage.getItem('likedRecipes')
-      if (stored) {
-        likedRecipes.value = JSON.parse(stored)
+    
+    const loadLikedRecipes = async () => {
+      try {
+        const response = await api.getLikedRecipes();
+        likedRecipes.value = response.likedRecipes.map(convertBackendRecipe);
+        console.log('Loaded liked recipes:', likedRecipes.value.length);
+      } catch (error) {
+        console.error('Failed to load liked recipes:', error);
+        
+        if (error.message.includes('Must be logged in') || error.message.includes('401')) {
+          likedRecipes.value = [];
+        }
       }
     }
 
-    const toggleLike = (recipe) => {
-      likedRecipes.value = likedRecipes.value.filter(r => r.id !== recipe.id)
-      localStorage.setItem('likedRecipes', JSON.stringify(likedRecipes.value))
+ 
+    const toggleLike = async (recipe) => {
+      const recipeId = getRecipeId(recipe);
       
-      const allRecipes = JSON.parse(localStorage.getItem('allRecipes') || '[]')
-      const originalRecipe = allRecipes.find(r => r.id === recipe.id)
-      if (originalRecipe) {
-        originalRecipe.isLiked = false
-        localStorage.setItem('allRecipes', JSON.stringify(allRecipes))
+      try {
+        unlikeLoading.value = recipeId; 
+        
+        await api.unlikeRecipe(recipeId);
+        
+      
+        likedRecipes.value = likedRecipes.value.filter(r => getRecipeId(r) !== recipeId);
+        
+        console.log('Recipe unliked:', getRecipeTitle(recipe));
+      } catch (error) {
+        console.error('Failed to unlike recipe:', error);
+        alert('Failed to unlike recipe. Please try again.');
+      } finally {
+        unlikeLoading.value = null;
       }
     }
 
     const openRecipe = (recipe) => {
-      // Emit event to parent to open recipe details
       emit('open-recipe', recipe)
     }
 
@@ -188,29 +319,29 @@ export default {
       }
     }
 
-    const handleStorageChange = () => {
-      loadLikedRecipes()
-    }
-
     onMounted(() => {
       loadLikedRecipes()
-      window.addEventListener('storage', handleStorageChange)
-      
-      return () => {
-        window.removeEventListener('storage', handleStorageChange)
-      }
     })
 
     return {
       likedRecipes,
       searchQuery,
       selectedDifficulty,
+      unlikeLoading,
       filteredLikedRecipes,
       toggleLike,
       openRecipe,
       goToHome,
       clearFilters,
-      formatLikedDate
+      formatLikedDate,
+      //recipe getters
+      getRecipeId,
+      getRecipeTitle,
+      getRecipeImage,
+      getRecipeRating,
+      getRecipeLikes,
+      getRecipeTime,
+      getRecipeDifficulty
     }
   }
 }

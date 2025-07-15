@@ -1,7 +1,6 @@
 <template>
   <div class="create-recipe-page">
     <div class="create-recipe-container">
-      <!-- Header -->
       <div class="page-header">
         <button class="back-btn" @click="goBack">
           ← Back to Home
@@ -10,9 +9,8 @@
         <p class="page-subtitle">Share your culinary creation with the FlavorCraft community</p>
       </div>
 
-      <!-- Recipe Form -->
+      <!-- recipef form -->
       <form @submit.prevent="saveRecipe" class="recipe-form">
-        <!-- Basic Info Section -->
         <div class="form-section">
           <h2 class="section-title">Basic Information</h2>
           
@@ -51,9 +49,11 @@
               <label for="difficulty">Difficulty Level *</label>
               <select id="difficulty" v-model="recipeForm.difficulty" required>
                 <option value="">Select difficulty</option>
-                <option value="Easy">Easy</option>
-                <option value="Med">Medium</option>
-                <option value="Hard">Hard</option>
+                <option value="1">Easy</option>
+                <option value="2">Medium</option>
+                <option value="3">Hard</option>
+                <option value="4">Very Hard</option>
+                <option value="5">Expert</option>
               </select>
             </div>
             
@@ -85,7 +85,7 @@
           </div>
         </div>
 
-        <!-- Image Section -->
+        <!-- image -->
         <div class="form-section">
           <h2 class="section-title">Recipe Image</h2>
           
@@ -117,7 +117,7 @@
           </div>
         </div>
 
-        <!-- Ingredients Section -->
+     
         <div class="form-section">
           <h2 class="section-title">Ingredients</h2>
           
@@ -130,21 +130,33 @@
               <div class="ingredient-inputs">
                 <input 
                   type="text" 
-                  v-model="ingredient.amount"
+                  v-model="ingredient.quantity"
                   placeholder="Amount"
                   class="amount-input"
                 />
-                <input 
-                  type="text" 
+                <select 
                   v-model="ingredient.unit"
-                  placeholder="Unit"
                   class="unit-input"
-                />
+                >
+                  <option value="">Unit</option>
+                  <option value="piece">piece</option>
+                  <option value="cup">cup</option>
+                  <option value="tbsp">tbsp</option>
+                  <option value="tsp">tsp</option>
+                  <option value="lb">lb</option>
+                  <option value="oz">oz</option>
+                  <option value="g">g</option>
+                  <option value="kg">kg</option>
+                  <option value="ml">ml</option>
+                  <option value="l">l</option>
+                  <option value="clove">clove</option>
+                </select>
                 <input 
                   type="text" 
                   v-model="ingredient.name"
                   placeholder="Ingredient name"
                   class="ingredient-input"
+                  required
                 />
               </div>
               <button 
@@ -163,7 +175,7 @@
           </button>
         </div>
 
-        <!-- Instructions Section -->
+      
         <div class="form-section">
           <h2 class="section-title">Cooking Instructions</h2>
           
@@ -176,10 +188,11 @@
               <div class="step-number">{{ index + 1 }}</div>
               <div class="step-content">
                 <textarea 
-                  v-model="step.text"
+                  v-model="step.Steps"
                   :placeholder="`Step ${index + 1}: Describe what to do...`"
                   rows="3"
                   class="step-input"
+                  required
                 ></textarea>
               </div>
               <button 
@@ -198,7 +211,7 @@
           </button>
         </div>
 
-        <!-- Categories Section -->
+
         <div class="form-section">
           <h2 class="section-title">Categories</h2>
           
@@ -234,7 +247,7 @@
           </div>
         </div>
 
-        <!-- Notes Section -->
+   
         <div class="form-section">
           <h2 class="section-title">Chef's Notes (Optional)</h2>
           
@@ -251,13 +264,12 @@
           </div>
         </div>
 
-        <!-- Form Actions -->
         <div class="form-actions">
           <button type="button" class="btn-secondary" @click="goBack">
             Cancel
           </button>
-          <button type="submit" class="btn-primary" :disabled="!isFormValid">
-            {{ isFormValid ? 'Publish Recipe' : 'Fill Required Fields' }}
+          <button type="submit" class="btn-primary" :disabled="!isFormValid || isSaving">
+            {{ isSaving ? 'Publishing...' : (isFormValid ? 'Publish Recipe' : 'Fill Required Fields') }}
           </button>
         </div>
       </form>
@@ -268,12 +280,50 @@
 <script setup>
 import { ref, computed } from 'vue'
 
+const API_BASE_URL = 'http://localhost:8080';
+
 const emit = defineEmits(['go-home', 'recipe-created'])
 
-// Add ref for file input
 const fileInput = ref(null)
+const isSaving = ref(false)
 
-// Form data
+const api = {
+  async request(endpoint, options = {}) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const config = {
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
+    };
+
+    const response = await fetch(url, config);
+    
+    if (response.headers.get('content-type')?.includes('application/json')) {
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP ${response.status}`);
+      }
+      return data;
+    } else {
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `HTTP ${response.status}`);
+      }
+      return { success: true };
+    }
+  },
+
+  async createRecipe(recipeData) {
+    return this.request('/recipe', {
+      method: 'POST',
+      body: JSON.stringify(recipeData)
+    });
+  }
+};
+
 const recipeForm = ref({
   title: '',
   description: '',
@@ -285,26 +335,24 @@ const recipeForm = ref({
   cuisine: '',
   notes: '',
   ingredients: [
-    { amount: '', unit: '', name: '' }
+    { quantity: '', unit: '', name: '' }
   ],
   instructions: [
-    { text: '' }
+    { Steps: '' }
   ]
 })
 
-// Computed properties
 const isFormValid = computed(() => {
   const form = recipeForm.value
   const hasBasicInfo = form.title && form.description && form.difficulty && form.cookTime && form.servings
   const hasIngredients = form.ingredients.some(ing => ing.name.trim() !== '')
-  const hasInstructions = form.instructions.some(inst => inst.text.trim() !== '')
+  const hasInstructions = form.instructions.some(inst => inst.Steps.trim() !== '')
   
   return hasBasicInfo && hasIngredients && hasInstructions
 })
 
-// Methods
 function addIngredient() {
-  recipeForm.value.ingredients.push({ amount: '', unit: '', name: '' })
+  recipeForm.value.ingredients.push({ quantity: '', unit: '', name: '' })
 }
 
 function removeIngredient(index) {
@@ -314,7 +362,7 @@ function removeIngredient(index) {
 }
 
 function addInstruction() {
-  recipeForm.value.instructions.push({ text: '' })
+  recipeForm.value.instructions.push({ Steps: '' })
 }
 
 function removeInstruction(index) {
@@ -335,20 +383,17 @@ function handleImageUpload(event) {
   const file = event.target.files[0]
   if (!file) return
 
-  // Check file size (5MB limit)
-  const maxSize = 5 * 1024 * 1024 // 5MB in bytes
+  const maxSize = 5 * 1024 * 1024
   if (file.size > maxSize) {
     alert('Image file is too large. Please choose an image smaller than 5MB.')
     return
   }
 
-  // Check file type
   if (!file.type.startsWith('image/')) {
     alert('Please select a valid image file.')
     return
   }
 
-  // Create a FileReader to convert to base64 data URL
   const reader = new FileReader()
   reader.onload = (e) => {
     recipeForm.value.imageUrl = e.target.result
@@ -359,40 +404,71 @@ function handleImageUpload(event) {
   reader.readAsDataURL(file)
 }
 
-function saveRecipe() {
+async function saveRecipe() {
   if (!isFormValid.value) {
     alert('Please fill in all required fields')
     return
   }
 
-  // Create the recipe object
-  const newRecipe = {
-    id: Date.now(), // Simple ID generation
-    title: recipeForm.value.title,
-    description: recipeForm.value.description,
-    image: recipeForm.value.imageUrl || 'https://images.unsplash.com/photo-1546793665-c74683f339c1?w=300',
-    rating: 0,
-    reviewCount: 0,
-    cookTime: parseInt(recipeForm.value.cookTime),
-    difficulty: recipeForm.value.difficulty,
-    servings: parseInt(recipeForm.value.servings),
-    category: recipeForm.value.category,
-    cuisine: recipeForm.value.cuisine,
-    notes: recipeForm.value.notes,
-    ingredients: recipeForm.value.ingredients.filter(ing => ing.name.trim() !== ''),
-    instructions: recipeForm.value.instructions.filter(inst => inst.text.trim() !== ''),
-    isLiked: false,
-    createdAt: new Date().toISOString(),
-    author: 'Current User' // This would come from auth
-  }
+  try {
+    isSaving.value = true;
 
-  // For now, just log the recipe and show success
-  console.log('New recipe created:', newRecipe)
-  
-  // Show success and redirect
-  alert(`Recipe "${newRecipe.title}" created successfully!`)
-  emit('recipe-created', newRecipe)
-  goBack()
+    const backendRecipeData = {
+      name: recipeForm.value.title,
+      description: recipeForm.value.description,
+      ingredients: recipeForm.value.ingredients
+        .filter(ing => ing.name.trim() !== '')
+        .map(ing => ({
+          name: ing.name,
+          quantity: parseFloat(ing.quantity) || 1,
+          unit: ing.unit || '',
+          notes: ''
+        })),
+      instructions: recipeForm.value.instructions
+        .filter(inst => inst.Steps.trim() !== '')
+        .map(inst => ({
+          Steps: inst.Steps
+        })),
+      time: `${recipeForm.value.cookTime} minutes`,
+      difficulty: parseInt(recipeForm.value.difficulty),
+      rating: 5
+    };
+
+    console.log('Sending recipe data:', backendRecipeData);
+
+    const response = await api.createRecipe(backendRecipeData);
+    
+    console.log('Recipe created successfully:', response);
+    
+    alert(`Recipe "${recipeForm.value.title}" created successfully!`);
+    
+    emit('recipe-created', response.recipe);
+    
+    resetForm();
+    goBack();
+
+  } catch (error) {
+    console.error('Failed to create recipe:', error);
+    alert(`Failed to create recipe: ${error.message}`);
+  } finally {
+    isSaving.value = false;
+  }
+}
+
+function resetForm() {
+  recipeForm.value = {
+    title: '',
+    description: '',
+    difficulty: '',
+    cookTime: '',
+    servings: '',
+    imageUrl: '',
+    category: '',
+    cuisine: '',
+    notes: '',
+    ingredients: [{ quantity: '', unit: '', name: '' }],
+    instructions: [{ Steps: '' }]
+  };
 }
 
 function goBack() {
@@ -670,6 +746,7 @@ function goBack() {
   border: 1px solid var(--background-tertiary);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
+  background: var(--background-primary);
 }
 
 .remove-ingredient-btn {
@@ -786,8 +863,6 @@ function goBack() {
   color: white;
   border-style: solid;
 }
-
-/* Remove tags-related styles since tags section is removed */
 
 /* ===== FORM ACTIONS ===== */
 .form-actions {

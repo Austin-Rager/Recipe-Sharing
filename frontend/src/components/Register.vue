@@ -152,7 +152,7 @@ onMounted(async () => {
 
 <template>
   <div class="login-page">
-    <!-- ADDED: Back button -->
+   
     <div v-if="showBackButton" class="back-button-container">
       <button @click="goBack" class="back-btn">
         ← Back to Home
@@ -160,7 +160,6 @@ onMounted(async () => {
     </div>
 
     <div class="auth-container">
-      <!-- Show login/register forms when not logged in -->
       <div v-if="!currentUser" class="auth-forms">
         <div class="form-toggle">
           <button 
@@ -179,11 +178,10 @@ onMounted(async () => {
           </button>
         </div>
 
-        <!-- Login Form -->
+     
         <form v-if="showLogin" @submit.prevent="loginUser" class="auth-form">
           <h2 style="margin-bottom: 5px;">Login</h2>
           
-          <!-- UPDATED: Username field instead of email -->
           <div class="form-group">
             <label for="login-username">Username:</label>
             <input
@@ -219,7 +217,7 @@ onMounted(async () => {
           </button>
         </form>
 
-        <!-- Register Form -->
+        
         <form v-else @submit.prevent="registerUser" class="auth-form">
           <h2 style="margin-bottom: 5px;">Register</h2>
           
@@ -236,7 +234,7 @@ onMounted(async () => {
             />
           </div>
 
-          <!-- ADDED: Username field -->
+          
           <div class="form-group">
             <label for="register-username">Username:</label>
             <input
