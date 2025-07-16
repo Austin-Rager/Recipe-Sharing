@@ -1012,19 +1012,43 @@ body {
 }
 
 /* Navigation Actions */
-.nav-actions {
+/* Only target auth buttons (login/register) when not logged in */
+.auth-buttons {
   display: flex;
   align-items: center;
-  gap: var(--space-6);
+  gap: var(--space-4);
+  flex-direction: row;
 }
 
+.auth-buttons .nav-btn {
+  padding: var(--space-3) var(--space-6);
+  background: var(--primary-color);
+  color: white;
+  border: 2px solid transparent;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.auth-buttons .nav-btn:hover {
+  background: var(--primary-hover);
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* Keep the logged-in nav buttons unchanged */
 .nav-buttons {
   display: flex;
   align-items: center;
   gap: var(--space-6);
 }
 
-.nav-btn {
+.nav-buttons .nav-btn {
+  /* Keep existing styles for logged-in buttons */
   padding: var(--space-3) var(--space-6);
   border: 2px solid transparent;
   background: var(--background-secondary);
@@ -1037,12 +1061,22 @@ body {
   transition: all var(--transition-fast);
 }
 
-.nav-btn:hover {
+.nav-buttons .home-btn,
+.nav-buttons .liked-btn {
   background: var(--primary-color);
+  color: white;
+}
+
+.nav-buttons .create-btn {
+  background: var(--success-color);
+  color: white;
+}
+
+.nav-btn:hover {
+  background: var(--primary-hover);
   color: white;
   transform: translateY(-2px);
 }
-
 .home-btn,
 .liked-btn {
   background: var(--primary-color);
@@ -1054,10 +1088,17 @@ body {
   color: white;
 }
 
+
 /* ===== PROFILE SECTION ===== */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
 .profile-section {
   position: relative;
-  margin-left: var(--space-4);
+  margin-left: var(--space-6);
 }
 
 .profile-menu {
@@ -1088,6 +1129,7 @@ body {
   justify-content: center;
   color: white;
   font-size: var(--font-size-base);
+  overflow: hidden;
 }
 
 .profile-name {
