@@ -539,6 +539,31 @@ function formatDate(dateString) {
   }
 }
 
+//edit stuff 
+const showEditRecipe = ref(false)
+const recipeToEdit = ref(null)
+
+function handleEditRecipe(recipeId) {
+  recipeToEdit.value = recipeId
+  showEditRecipe.value = true
+  showProfile.value = false
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function handleRecipeUpdated(updatedRecipe) {
+  // Handle the updated recipe (maybe refresh the profile data)
+  showEditRecipe.value = false
+  showProfile.value = true
+  // Optionally refresh the profile page data
+}
+
+function handleRecipeDeleted(deletedRecipeId) {
+  // Handle the deleted recipe
+  showEditRecipe.value = false
+  showProfile.value = true
+  // Optionally refresh the profile page data
+}
+
 onMounted(async () => {
   console.log('Profile page loaded')
   await loadUserData()

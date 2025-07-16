@@ -79,9 +79,6 @@
                  <button class="dropdown-item" @click="goToLikedRecipes">
                    Liked Recipes
                  </button>
-                 <button class="dropdown-item" @click="goToMyRecipes">
-                   My Recipes
-                 </button>
                  <div class="dropdown-divider"></div>
                  <button class="dropdown-item logout" @click="logout">
                    Logout
@@ -133,6 +130,14 @@
          @go-home="goToHome"
          @recipe-created="handleRecipeCreated"
        />
+
+    <EditRecipePage 
+      v-else-if="showEditRecipe && recipeToEdit"
+      :recipe-id="recipeToEdit"
+      @go-home="goToHome"
+      @recipe-updated="handleRecipeUpdated"
+      @recipe-deleted="handleRecipeDeleted"
+    />
 
        <div v-else>
          <div class="main-content">
@@ -386,6 +391,16 @@ function convertBackendRecipe(backendRecipe) {
     instructions: backendRecipe.instructions,
     _original: backendRecipe
   };
+}
+
+const showEditRecipe = ref(false)
+const recipeToEdit = ref(null)
+
+function handleEditRecipe(recipeId) {
+  recipeToEdit.value = recipeId
+  showEditRecipe.value = true
+  showProfile.value = false
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 function parseTime(timeString) {
