@@ -86,36 +86,66 @@
         </div>
 
         <!-- image -->
-        <div class="form-section">
-          <h2 class="section-title">Recipe Image</h2>
-          
-          <div class="image-upload-section">
-            <div class="image-preview" v-if="recipeForm.imageUrl">
-              <img :src="recipeForm.imageUrl" alt="Recipe preview" />
-              <button type="button" class="remove-image-btn" @click="removeImage">
-                ✕
-              </button>
-            </div>
-            
-            <div class="image-upload" v-else>
-              <div class="upload-placeholder" @click="triggerFileInput">
-                <span class="upload-icon">📷</span>
-                <p>Add a delicious photo of your recipe</p>
-                <button type="button" class="upload-btn">
-                  Choose Image File
-                </button>
-                <p class="upload-help">JPG, PNG, or WebP • Max 5MB</p>
-                <input 
-                  ref="fileInput"
-                  type="file" 
-                  @change="handleImageUpload"
-                  accept="image/*"
-                  class="file-input-hidden"
-                />
-              </div>
-            </div>
-          </div>
+<div class="form-section">
+  <h2 class="section-title">Recipe Images</h2>
+  
+  <div class="image-upload-section">
+    <!-- Upload Button Area (always visible when under 5 images) -->
+    <div class="image-upload" v-if="selectedImages.length < 5">
+      <div class="upload-placeholder" @click="triggerFileInput">
+        <span class="upload-icon">📷</span>
+        <p v-if="selectedImages.length === 0">Add delicious photos of your recipe</p>
+        <p v-else>Add more images ({{ selectedImages.length }}/5)</p>
+        <button type="button" class="upload-btn">
+          Choose Image Files
+        </button>
+        <p class="upload-help">JPG, PNG, or WebP • Max 5MB each • Up to 5 images</p>
+        <input 
+          ref="fileInput"
+          type="file" 
+          @change="handleImageUpload"
+          accept="image/*"
+          multiple
+          class="file-input-hidden"
+        />
+      </div>
+    </div>
+    
+    <!-- Show when limit reached -->
+    <div v-if="selectedImages.length >= 5" class="upload-limit-message">
+      <p>Maximum of 5 images reached</p>
+      <button type="button" class="btn-secondary small" @click="removeImage(selectedImages.length - 1)">
+        Remove Last Image
+      </button>
+    </div>
+  </div>
+  
+  <!-- Image Preview Grid (separate section) -->
+  <div class="image-preview-section" v-if="selectedImages.length > 0">
+    <h3 class="preview-title">Selected Images ({{ selectedImages.length }}/5)</h3>
+    <div class="image-preview-grid">
+      <div 
+        v-for="(imageData, index) in imagePreviewData" 
+        :key="index"
+        class="image-preview-item"
+      >
+        <img :src="imageData.preview" :alt="imageData.name" />
+        <button 
+          type="button" 
+          class="remove-image-btn" 
+          @click="removeImage(index)"
+          title="Remove image"
+        >
+          ✕
+        </button>
+        <div class="image-info">
+          <p class="image-name">{{ imageData.name }}</p>
+          <p class="image-size">{{ Math.round(imageData.size / 1024) }} KB</p>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
 
      
         <div class="form-section">
@@ -278,7 +308,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 
 const API_BASE_URL = 'http://localhost:8080';
 
@@ -286,6 +316,7 @@ const emit = defineEmits(['go-home', 'recipe-created'])
 
 const fileInput = ref(null)
 const isSaving = ref(false)
+const selectedImages = ref([]) // Store selected images with their preview URLs
 
 const api = {
   async request(endpoint, options = {}) {
@@ -321,6 +352,31 @@ const api = {
       method: 'POST',
       body: JSON.stringify(recipeData)
     });
+  },
+
+  // Method for creating recipe with images using FormData
+  async createRecipeWithImages(formData) {
+    const url = `${API_BASE_URL}/recipe`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData, // Don't set Content-Type header - let browser handle it
+      credentials: 'include'
+    });
+    
+    if (response.headers.get('content-type')?.includes('application/json')) {
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || data.message || `HTTP ${response.status}`);
+      }
+      return data;
+    } else {
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `HTTP ${response.status}`);
+      }
+      return { success: true };
+    }
   }
 };
 
@@ -371,72 +427,159 @@ function removeInstruction(index) {
   }
 }
 
-function removeImage() {
-  recipeForm.value.imageUrl = ''
-}
-
 function triggerFileInput() {
   fileInput.value?.click()
 }
 
+// UPDATED: Handle image upload function
 function handleImageUpload(event) {
-  const file = event.target.files[0]
-  if (!file) return
-
-  const maxSize = 5 * 1024 * 1024
-  if (file.size > maxSize) {
-    alert('Image file is too large. Please choose an image smaller than 5MB.')
-    return
+  const files = Array.from(event.target.files);
+  
+  if (files.length === 0) return;
+  
+  // Check if total images exceed limit
+  if (selectedImages.value.length + files.length > 5) {
+    alert('You can only upload up to 5 images total.');
+    if (fileInput.value) {
+      fileInput.value.value = '';
+    }
+    return;
   }
 
-  if (!file.type.startsWith('image/')) {
-    alert('Please select a valid image file.')
-    return
+  const maxSize = 5 * 1024 * 1024; // 5MB
+  
+  // Validate each file
+  for (const file of files) {
+    if (file.size > maxSize) {
+      alert(`Image "${file.name}" is too large. Please choose images smaller than 5MB.`);
+      if (fileInput.value) {
+        fileInput.value.value = '';
+      }
+      return;
+    }
+    
+    if (!file.type.startsWith('image/')) {
+      alert(`"${file.name}" is not a valid image file.`);
+      if (fileInput.value) {
+        fileInput.value.value = '';
+      }
+      return;
+    }
   }
 
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    recipeForm.value.imageUrl = e.target.result
+  // Create preview URLs and add to selectedImages
+  files.forEach(file => {
+    const imageData = {
+      file,
+      name: file.name,
+      size: file.size,
+      preview: URL.createObjectURL(file)
+    };
+    selectedImages.value.push(imageData);
+  });
+  
+  console.log('Selected images:', selectedImages.value.map(img => img.name));
+  
+  // Clear the input
+  if (fileInput.value) {
+    fileInput.value.value = '';
   }
-  reader.onerror = () => {
-    alert('Error reading the image file. Please try again.')
-  }
-  reader.readAsDataURL(file)
 }
 
+// UPDATED: Remove image function
+function removeImage(index) {
+  const imageData = selectedImages.value[index];
+  
+  // Clean up the preview URL
+  if (imageData && imageData.preview) {
+    URL.revokeObjectURL(imageData.preview);
+  }
+  
+  selectedImages.value.splice(index, 1);
+  console.log('Removed image at index', index, 'Remaining:', selectedImages.value.length);
+}
+
+// Simple computed property that just returns the selectedImages
+const imagePreviewData = computed(() => {
+  return selectedImages.value.map((imageData, index) => ({
+    ...imageData,
+    index
+  }));
+});
+
+// UPDATED: Save recipe function
 async function saveRecipe() {
   if (!isFormValid.value) {
-    alert('Please fill in all required fields')
-    return
+    alert('Please fill in all required fields');
+    return;
   }
 
   try {
     isSaving.value = true;
 
-    const backendRecipeData = {
-      name: recipeForm.value.title,
-      description: recipeForm.value.description,
-      ingredients: recipeForm.value.ingredients
-        .filter(ing => ing.name.trim() !== '')
-        .map(ing => ({
-          name: ing.name,
-          quantity: parseFloat(ing.quantity) || 1,
-          unit: ing.unit || '',
-          notes: ''
-        })),
-      instructions: recipeForm.value.instructions
-        .filter(inst => inst.Steps.trim() !== '')
-        .map(inst => ({
-          Steps: inst.Steps
-        })),
-      time: `${recipeForm.value.cookTime} minutes`,
-      difficulty: parseInt(recipeForm.value.difficulty),
-      rating: 5
-    };
+    // Create FormData object for file upload
+    const formData = new FormData();
+    
+    // Add recipe data
+    formData.append('name', recipeForm.value.title);
+    formData.append('description', recipeForm.value.description);
+    
+    // Convert ingredients and instructions to JSON strings
+    const ingredients = recipeForm.value.ingredients
+      .filter(ing => ing.name.trim() !== '')
+      .map(ing => ({
+        name: ing.name,
+        quantity: parseFloat(ing.quantity) || 1,
+        unit: ing.unit || '',
+        notes: ''
+      }));
+    
+    const instructions = recipeForm.value.instructions
+      .filter(inst => inst.Steps.trim() !== '')
+      .map(inst => ({
+        Steps: inst.Steps
+      }));
+    
+    formData.append('ingredients', JSON.stringify(ingredients));
+    formData.append('instructions', JSON.stringify(instructions));
+    formData.append('time', recipeForm.value.cookTime);
+    formData.append('difficulty', recipeForm.value.difficulty);
+    formData.append('rating', 5);
+    
+    // Add additional fields if they exist
+    if (recipeForm.value.servings) {
+      formData.append('servings', recipeForm.value.servings);
+    }
+    if (recipeForm.value.category) {
+      formData.append('category', recipeForm.value.category);
+    }
+    if (recipeForm.value.cuisine) {
+      formData.append('cuisine', recipeForm.value.cuisine);
+    }
+    if (recipeForm.value.notes) {
+      formData.append('notes', recipeForm.value.notes);
+    }
+    
+    // Add image files - UPDATED to use the file from imageData
+    selectedImages.value.forEach((imageData) => {
+      formData.append('images', imageData.file);
+    });
 
-    console.log('Sending recipe data:', backendRecipeData);
+    console.log('Sending recipe data with', selectedImages.value.length, 'images');
+    console.log('Recipe name:', recipeForm.value.title);
+    console.log('Ingredients count:', ingredients.length);
+    console.log('Instructions count:', instructions.length);
+    
+    // Log FormData contents (for debugging)
+    for (let pair of formData.entries()) {
+      if (pair[1] instanceof File) {
+        console.log(pair[0], 'FILE:', pair[1].name, pair[1].size, 'bytes');
+      } else {
+        console.log(pair[0], pair[1]);
+      }
+    }
 
-    const response = await api.createRecipe(backendRecipeData);
+    const response = await api.createRecipeWithImages(formData);
     
     console.log('Recipe created successfully:', response);
     
@@ -455,7 +598,15 @@ async function saveRecipe() {
   }
 }
 
+// UPDATED: Reset form function
 function resetForm() {
+  // Clean up all preview URLs
+  selectedImages.value.forEach(imageData => {
+    if (imageData.preview) {
+      URL.revokeObjectURL(imageData.preview);
+    }
+  });
+  
   recipeForm.value = {
     title: '',
     description: '',
@@ -469,11 +620,30 @@ function resetForm() {
     ingredients: [{ quantity: '', unit: '', name: '' }],
     instructions: [{ Steps: '' }]
   };
+  
+  // Clear selected images
+  selectedImages.value = [];
+  
+  // Clear file input
+  if (fileInput.value) {
+    fileInput.value.value = '';
+  }
+  
+  console.log('Form reset');
 }
 
 function goBack() {
   emit('go-home')
 }
+
+// Clean up URLs when component is unmounted
+onUnmounted(() => {
+  selectedImages.value.forEach(imageData => {
+    if (imageData.preview) {
+      URL.revokeObjectURL(imageData.preview);
+    }
+  });
+});
 </script>
 
 <style>
@@ -493,6 +663,185 @@ function goBack() {
 .page-header {
   text-align: center;
   margin-bottom: var(--space-8);
+}
+.image-upload-section {
+  margin-bottom: 30px;
+}
+
+.image-upload {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.upload-placeholder {
+  border: 2px dashed #ddd;
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  background: #f9f9f9;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.upload-placeholder:hover {
+  border-color: #007bff;
+  background: #f0f8ff;
+}
+
+.upload-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 15px;
+}
+
+.upload-btn {
+  margin: 15px 0;
+  padding: 12px 30px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 25px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.upload-btn:hover {
+  background: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+}
+
+.upload-help {
+  font-size: 14px;
+  color: #666;
+  margin: 10px 0 0 0;
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+.upload-limit-message {
+  text-align: center;
+  padding: 20px;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  color: #856404;
+}
+
+.upload-limit-message p {
+  margin: 0 0 10px 0;
+  font-weight: 600;
+}
+
+.btn-secondary.small {
+  padding: 8px 16px;
+  font-size: 14px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.btn-secondary.small:hover {
+  background: #5a6268;
+}
+
+/* Image Preview Section */
+.image-preview-section {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.preview-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.image-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.image-preview-item {
+  position: relative;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.image-preview-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  border-color: #007bff;
+}
+
+.image-preview-item img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(220, 53, 69, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  opacity: 0.8;
+}
+
+.remove-image-btn:hover {
+  background-color: rgba(220, 53, 69, 1);
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.image-info {
+  padding: 12px;
+  text-align: center;
+  background: #f8f9fa;
+}
+
+.image-name {
+  font-size: 13px;
+  margin: 0 0 4px 0;
+  word-break: break-all;
+  color: #333;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.image-size {
+  font-size: 12px;
+  margin: 0;
+  color: #666;
+  font-weight: 500;
 }
 
 .back-btn {
@@ -954,6 +1303,18 @@ function goBack() {
   .btn-secondary {
     width: 100%;
   }
+    .image-preview-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+  }
+  
+  .upload-placeholder {
+    padding: 30px 15px;
+  }
+  
+  .upload-icon {
+    font-size: 2.5rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -972,6 +1333,22 @@ function goBack() {
   .upload-icon {
     font-size: 2rem;
   }
+    .image-preview-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  
+  .image-preview-item img {
+    height: 100px;
+  }
+  
+  .upload-placeholder {
+    padding: 25px 10px;
+  }
+  
+  .upload-icon {
+    font-size: 2rem;
+ }
 }
 
 /* ===== ACCESSIBILITY ===== */
