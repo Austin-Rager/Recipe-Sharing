@@ -379,7 +379,8 @@ function convertBackendRecipe(backendRecipe) {
     description: backendRecipe.description || "Delicious recipe",
     image: backendRecipe.images?.length > 0 
       ? backendRecipe.images[0].url 
-      : "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400",
+      : "https://www.svgrepo.com/show/9389/fork-plate-knife.svg",
+
     rating: backendRecipe.rating || 4.0,
     reviewCount: backendRecipe.likes || 0,
     cookTime: parseTime(backendRecipe.time),
@@ -454,7 +455,8 @@ function getRecipeDescription(recipe) {
 function getRecipeImage(recipe) {
   if (recipe.image) return recipe.image;
   if (recipe.images?.length > 0) return recipe.images[0].url;
-  return "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400";
+  console.log("image loaded")
+  return "../assets/fork-plate-knife.svg"; 
 }
 
 function getRecipeRating(recipe) {
