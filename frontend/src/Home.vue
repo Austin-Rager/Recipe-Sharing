@@ -105,6 +105,9 @@
                  <button class="dropdown-item" @click="goToProfile">
                    My Profile
                  </button>
+                 <button class="dropdown-item" @click="goToMyRecipes">
+                   My Recipes
+                 </button>
                  <button class="dropdown-item" @click="goToLikedRecipes">
                    Liked Recipes
                  </button>
@@ -156,6 +159,7 @@
        <LikedPage 
          v-else-if="showLiked && isLoggedIn" 
          @go-home="goToHome" 
+         @open-recipe="openRecipe"
        />
        
        <ProfilePage 
@@ -165,19 +169,31 @@
          @edit-recipe="handleEditRecipe"
        />
 
+       <MyRecipesPage 
+         v-else-if="showMyRecipes && isLoggedIn" 
+         @go-home="goToHome" 
+         @recipe-selected="openRecipe"
+       />
+
        <CreateRecipePage 
          v-else-if="showCreateRecipe && isLoggedIn"
          @go-home="goToHome"
          @recipe-created="handleRecipeCreated"
        />
 
-       <EditRecipePage 
-          v-else-if="showEditRecipe && recipeToEdit"
-          :recipe-id="recipeToEdit"
-          @go-home="goToHome"
-          @recipe-updated="handleRecipeUpdated"
-          @recipe-deleted="handleRecipeDeleted"
-        />
+    <EditRecipePage 
+      v-else-if="showEditRecipe && recipeToEdit"
+      :recipe-id="recipeToEdit"
+      @go-home="goToHome"
+      @recipe-updated="handleRecipeUpdated"
+      @recipe-deleted="handleRecipeDeleted"
+    />
+
+    <RecipeDetails 
+      v-else-if="showRecipeDetails && selectedRecipe"
+      :recipe-data="selectedRecipe"
+      @go-home="goToHome"
+    />
 
        <div v-else>
          <div class="main-content">
@@ -335,7 +351,9 @@ import LikedPage from './components/LikedPage.vue';
 import ProfilePage from './components/MyProfile.vue';
 import CreateRecipePage from './components/CreateRecipe.vue';
 import EditRecipePage from './components/EditRecipe.vue';
+import MyRecipesPage from './components/MyRecipes.vue';
 import Register from './components/Register.vue';
+import RecipeDetails from './components/RecipeDetails.vue';
 
 const API_BASE_URL = 'http://localhost:8080';
 
@@ -348,6 +366,9 @@ const showCreateRecipe = ref(false)
 const showEditRecipe = ref(false)
 const recipeToEdit = ref(null)
 const showLoginPage = ref(false)
+const showRecipeDetails = ref(false)
+const showMyRecipes = ref(false)
+const selectedRecipe = ref(null)
 const selectedDifficulties = ref([])
 const minRating = ref('') 
 const maxCookTime = ref('') 
@@ -461,6 +482,10 @@ const api = {
 
  async getAllRecipes() {
    return this.request('/recipes');
+ },
+
+ async getRecipeById(id) {
+   return this.request(`/recipe/${id}`);
  },
 
  async getLikedRecipes() {
@@ -814,8 +839,28 @@ async function toggleLike(recipe) {
  }
 }
 
-function openRecipe(recipe) {
- showNotification('info', `Opening "${getRecipeTitle(recipe)}"...`, 'Recipe Details');
+async function openRecipe(recipe) {
+  try {
+    // If we have basic recipe data, show it immediately
+    selectedRecipe.value = recipe;
+    showRecipeDetails.value = true;
+    showLiked.value = false;
+    showProfile.value = false;
+    showCreateRecipe.value = false;
+    showLoginPage.value = false;
+    showMyRecipes.value = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Then try to fetch complete recipe data if we have an ID
+    const recipeId = getRecipeId(recipe);
+    if (recipeId && !recipe.ingredients) {
+      const fullRecipe = await api.getRecipeById(recipeId);
+      selectedRecipe.value = convertBackendRecipe(fullRecipe.recipe);
+    }
+  } catch (error) {
+    console.error('Failed to fetch recipe details:', error);
+    // Continue with the basic recipe data we have
+  }
 }
 
 function performSearch() {
@@ -834,8 +879,10 @@ function goToHome() {
  showCreateRecipe.value = false;
  showEditRecipe.value = false;
  showLoginPage.value = false;
+ showRecipeDetails.value = false;
+ showMyRecipes.value = false;
  showProfileMenu.value = false;
- recipeToEdit.value = null;
+ selectedRecipe.value = null;
  clearFilters();
 }
 
@@ -850,8 +897,10 @@ function goToCreateRecipe() {
  showProfile.value = false;
  showEditRecipe.value = false;
  showLoginPage.value = false;
+ showRecipeDetails.value = false;
+ showMyRecipes.value = false;
  showProfileMenu.value = false;
- recipeToEdit.value = null;
+ selectedRecipe.value = null;
  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -868,7 +917,9 @@ function goToLikedRecipes() {
  showCreateRecipe.value = false;
  showEditRecipe.value = false;
  showLoginPage.value = false;
- recipeToEdit.value = null;
+ showRecipeDetails.value = false;
+ showMyRecipes.value = false;
+ selectedRecipe.value = null;
  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -890,7 +941,9 @@ function goToProfile() {
  showCreateRecipe.value = false;
  showEditRecipe.value = false;
  showLoginPage.value = false;
- recipeToEdit.value = null;
+ showRecipeDetails.value = false;
+ showMyRecipes.value = false;
+ selectedRecipe.value = null;
  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -997,6 +1050,29 @@ function handleRecipeCreated(newRecipe) {
 
  setTimeout(() => {
    showNotification('success', `"${getRecipeTitle(convertedRecipe)}" has been published successfully!`, 'Recipe Published 🎉');
+ }, 100);
+}
+
+function handleRecipeUpdated(updatedRecipe) {
+ const convertedRecipe = convertBackendRecipe(updatedRecipe);
+ const index = apiRecipes.value.findIndex(r => getRecipeId(r) === getRecipeId(convertedRecipe));
+ if (index !== -1) {
+   apiRecipes.value[index] = convertedRecipe;
+ }
+ 
+ setTimeout(() => {
+   alert(`🎉 "${getRecipeTitle(convertedRecipe)}" has been updated successfully!`);
+ }, 100);
+}
+
+function handleRecipeDeleted(recipeId) {
+ const index = apiRecipes.value.findIndex(r => getRecipeId(r) === recipeId);
+ if (index !== -1) {
+   apiRecipes.value.splice(index, 1);
+ }
+ 
+ setTimeout(() => {
+   alert(`Recipe has been deleted successfully!`);
  }, 100);
 }
 
@@ -1440,6 +1516,12 @@ body {
 
 .dropdown-item.logout {
   color: var(--danger-color);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--background-tertiary);
+  margin: var(--space-2) 0;
 }
 
 /* ===== MAIN CONTENT LAYOUT ===== */

@@ -48,7 +48,7 @@
     </div>
 
     <!-- no liked recipes -->
-    <div class="empty-state" v-if="likedRecipes.length === 0">
+    <div class="empty-state" v-if="!loading && likedRecipes.length === 0">
       <div class="empty-icon">💔</div>
       <h2>No liked recipes yet</h2>
       <p>Start exploring recipes!</p>
@@ -117,6 +117,7 @@ export default {
     const API_BASE_URL = 'http://localhost:8080';
     
     const likedRecipes = ref([])
+    const loading = ref(true)
     const searchQuery = ref('')
     const selectedDifficulty = ref('')
     const unlikeLoading = ref(null) 
@@ -255,6 +256,7 @@ export default {
     
     const loadLikedRecipes = async () => {
       try {
+        loading.value = true 
         const response = await api.getLikedRecipes();
         likedRecipes.value = response.likedRecipes.map(convertBackendRecipe);
         console.log('Loaded liked recipes:', likedRecipes.value.length);
@@ -264,6 +266,8 @@ export default {
         if (error.message.includes('Must be logged in') || error.message.includes('401')) {
           likedRecipes.value = [];
         }
+      } finally {
+        loading.value = false 
       }
     }
 
@@ -325,6 +329,7 @@ export default {
 
     return {
       likedRecipes,
+      loading,
       searchQuery,
       selectedDifficulty,
       unlikeLoading,
