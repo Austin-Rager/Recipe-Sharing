@@ -457,44 +457,44 @@ function handleEditRecipe(recipeId) {
   
 
 
-function handleRecipeUpdated(updatedRecipe) {
-  console.log('Recipe updated:', updatedRecipe)
+// function handleRecipeUpdated(updatedRecipe) {
+//   console.log('Recipe updated:', updatedRecipe)
   
 
-  const recipeIndex = apiRecipes.value.findIndex(recipe => 
-    (recipe.id || recipe._id) === (updatedRecipe.id || updatedRecipe._id)
-  )
+//   const recipeIndex = apiRecipes.value.findIndex(recipe => 
+//     (recipe.id || recipe._id) === (updatedRecipe.id || updatedRecipe._id)
+//   )
   
-  if (recipeIndex !== -1) {
+//   if (recipeIndex !== -1) {
 
-    apiRecipes.value[recipeIndex] = convertBackendRecipe(updatedRecipe)
-  }
+//     apiRecipes.value[recipeIndex] = convertBackendRecipe(updatedRecipe)
+//   }
   
-  showEditRecipe.value = false
-  showProfile.value = true
+//   showEditRecipe.value = false
+//   showProfile.value = true
 
-  setTimeout(() => {
-    alert(`Recipe "${getRecipeTitle(updatedRecipe)}" updated successfully`)
-  }, 100)
-}
+//   setTimeout(() => {
+//     alert(`Recipe "${getRecipeTitle(updatedRecipe)}" updated successfully`)
+//   }, 100)
+// }
 
-function handleRecipeDeleted(recipeId) {
-  console.log('Recipe deleted:', recipeId)
-  
-
-  apiRecipes.value = apiRecipes.value.filter(recipe => 
-    (recipe.id || recipe._id) !== recipeId
-  )
+// function handleRecipeDeleted(recipeId) {
+//   console.log('Recipe deleted:', recipeId)
   
 
-  showEditRecipe.value = false
-  showProfile.value = true
+//   apiRecipes.value = apiRecipes.value.filter(recipe => 
+//     (recipe.id || recipe._id) !== recipeId
+//   )
   
 
-  setTimeout(() => {
-    alert('Recipe deleted successfully')
-  }, 100)
-}
+//   showEditRecipe.value = false
+//   showProfile.value = true
+  
+
+//   setTimeout(() => {
+//     alert('Recipe deleted successfully')
+//   }, 100)
+// }
 
 function parseTime(timeString) {
  if (!timeString) return 30;
