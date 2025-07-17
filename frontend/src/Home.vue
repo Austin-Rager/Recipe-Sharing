@@ -79,9 +79,6 @@
                  <button class="dropdown-item" @click="goToLikedRecipes">
                    Liked Recipes
                  </button>
-                 <button class="dropdown-item" @click="goToMyRecipes">
-                   My Recipes
-                 </button>
                  <div class="dropdown-divider"></div>
                  <button class="dropdown-item logout" @click="logout">
                    Logout
