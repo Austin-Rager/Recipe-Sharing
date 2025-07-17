@@ -666,6 +666,7 @@ onMounted(async () => {
   await loadLikedRecipes()
 })
 </script>
+
 <style>
 /* ===== PROFILE PAGE STYLES ===== */
 .profile-page {
