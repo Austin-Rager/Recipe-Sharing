@@ -212,18 +212,16 @@ app.post("/recipe", createRecipeLimiter, upload.array('images', 5), async (req, 
     }
 
     // AI validation step
+    let aiValidationPassed = true;
     try {
         const verdict = await validateRecipeAI(data.name, ingredients);
 
         if (!verdict || !verdict.includes("This recipe looks good.")) {
-            return res.status(400).json({
-                error: "Recipe validation failed",
-                message: verdict
-            });
+            aiValidationPassed = false;
+            console.warn("AI validation failed:", verdict);
         }
     } catch (error) {
-        console.error("AI validation error:", error);
-        return res.status(500).json({ error: "AI validation failed" });
+        console.warn("AI validation skipped due to error:", error.message);
     }
 
     try {
