@@ -105,9 +105,6 @@
                  <button class="dropdown-item" @click="goToProfile">
                    My Profile
                  </button>
-                 <button class="dropdown-item" @click="goToMyRecipes">
-                   My Recipes
-                 </button>
                  <button class="dropdown-item" @click="goToLikedRecipes">
                    Liked Recipes
                  </button>
