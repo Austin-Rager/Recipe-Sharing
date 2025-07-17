@@ -566,41 +566,50 @@ function handleEditRecipe(recipeId) {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-
-function handleRecipeUpdated(updatedRecipe) {
-  console.log('Recipe updated:', updatedRecipe)
   
-  const recipeIndex = apiRecipes.value.findIndex(recipe => 
-    (recipe.id || recipe._id) === (updatedRecipe.id || updatedRecipe._id)
-  )
+
+
+// function handleRecipeUpdated(updatedRecipe) {
+//   console.log('Recipe updated:', updatedRecipe)
+  
+
+//   const recipeIndex = apiRecipes.value.findIndex(recipe => 
+//     (recipe.id || recipe._id) === (updatedRecipe.id || updatedRecipe._id)
+//   )
   
   if (recipeIndex !== -1) {
     apiRecipes.value[recipeIndex] = convertBackendRecipe(updatedRecipe)
   }
-  
-  showEditRecipe.value = false
-  showProfile.value = true
+//   if (recipeIndex !== -1) {
 
-  setTimeout(() => {
-    showNotification('success', `"${getRecipeTitle(updatedRecipe)}" updated successfully`, 'Recipe Updated ✨');
-  }, 100)
-}
+//     apiRecipes.value[recipeIndex] = convertBackendRecipe(updatedRecipe)
+//   }
+  
+//   showEditRecipe.value = false
+//   showProfile.value = true
 
-function handleRecipeDeleted(recipeId) {
-  console.log('Recipe deleted:', recipeId)
+//   setTimeout(() => {
+//     alert(`Recipe "${getRecipeTitle(updatedRecipe)}" updated successfully`)
+//   }, 100)
+// }
+
+// function handleRecipeDeleted(recipeId) {
+//   console.log('Recipe deleted:', recipeId)
   
-  apiRecipes.value = apiRecipes.value.filter(recipe => 
-    (recipe.id || recipe._id) !== recipeId
-  )
+
+//   apiRecipes.value = apiRecipes.value.filter(recipe => 
+//     (recipe.id || recipe._id) !== recipeId
+//   )
   
-  showEditRecipe.value = false
-  showProfile.value = true
+
+//   showEditRecipe.value = false
+//   showProfile.value = true
   
-  
-  setTimeout(() => {
-    showNotification('success', 'Recipe deleted successfully', 'Recipe Deleted 🗑️');
-  }, 100)
-}
+
+//   setTimeout(() => {
+//     alert('Recipe deleted successfully')
+//   }, 100)
+// }
 
 function parseTime(timeString) {
  if (!timeString) return 30;
