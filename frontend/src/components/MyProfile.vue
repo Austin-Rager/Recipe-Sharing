@@ -228,7 +228,7 @@ import { ref, computed, onMounted } from 'vue'
 
 const API_BASE_URL = 'http://localhost:8080';
 
-const emit = defineEmits(['go-home', 'go-to-liked', 'go-to-create'])
+const emit = defineEmits(['go-home', 'go-to-liked', 'go-to-create', 'go-to-edit'])
 
 const api = {
   async request(endpoint, options = {}) {
@@ -466,9 +466,11 @@ function openRecipe(recipe) {
   alert(`Opening recipe: ${getRecipeTitle(recipe)}`)
 }
 
+
 function editRecipe(recipe) {
-  console.log('Editing recipe:', getRecipeTitle(recipe))
-  alert(`Edit functionality would open for: ${getRecipeTitle(recipe)}`)
+  const recipeId = getRecipeId(recipe)
+  console.log('Editing recipe:', getRecipeTitle(recipe), 'ID:', recipeId)
+  emit('go-to-edit', recipeId)
 }
 
 async function deleteRecipe(recipe) {
@@ -539,30 +541,9 @@ function formatDate(dateString) {
   }
 }
 
-//edit stuff 
-const showEditRecipe = ref(false)
-const recipeToEdit = ref(null)
 
-function handleEditRecipe(recipeId) {
-  recipeToEdit.value = recipeId
-  showEditRecipe.value = true
-  showProfile.value = false
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-}
 
-function handleRecipeUpdated(updatedRecipe) {
-  // Handle the updated recipe (maybe refresh the profile data)
-  showEditRecipe.value = false
-  showProfile.value = true
-  // Optionally refresh the profile page data
-}
 
-function handleRecipeDeleted(deletedRecipeId) {
-  // Handle the deleted recipe
-  showEditRecipe.value = false
-  showProfile.value = true
-  // Optionally refresh the profile page data
-}
 
 onMounted(async () => {
   console.log('Profile page loaded')
