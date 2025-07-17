@@ -367,11 +367,196 @@ const recipeForm = ref({
   ]
 })
 
+const isFormValid = computed(() => {
+  const form = recipeForm.value
+  const hasBasicInfo = form.title && form.description && form.difficulty && form.cookTime && form.servings
+  const hasIngredients = form.ingredients.some(ing => ing.name.trim() !== '')
+  const hasInstructions = form.instructions.some(inst => inst.Steps.trim() !== '')
+  
+  return hasBasicInfo && hasIngredients && hasInstructions
+})
+
+// Parse time string to extract minutes
+function parseTime(timeString) {
+  if (!timeString) return 30;
+  const match = timeString.match(/(\d+)/);
+  return match ? parseInt(match[1]) : 30;
+}
+
+// Convert backend recipe data to form format
+function populateForm(recipeData) {
+  recipeForm.value = {
+    title: recipeData.name || '',
+    description: recipeData.description || '',
+    difficulty: recipeData.difficulty?.toString() || '',
+    cookTime: parseTime(recipeData.time),
+    servings: recipeData.servings || '',
+    imageUrl: recipeData.images?.length > 0 ? recipeData.images[0].url : '',
+    category: recipeData.category || '',
+    cuisine: recipeData.cuisine || '',
+    notes: recipeData.notes || '',
+    ingredients: recipeData.ingredients?.length > 0 
+      ? recipeData.ingredients.map(ing => ({
+          quantity: ing.quantity?.toString() || '',
+          unit: ing.unit || '',
+          name: ing.name || ''
+        }))
+      : [{ quantity: '', unit: '', name: '' }],
+    instructions: recipeData.instructions?.length > 0 
+      ? recipeData.instructions.map(inst => ({
+          Steps: inst.Steps || ''
+        }))
+      : [{ Steps: '' }]
+  };
+}
+
+// Load recipe data on mount
+onMounted(async () => {
+  try {
+    console.log('Loading recipe with ID:', props.recipeId);
+    const response = await api.getRecipe(props.recipeId);
+    console.log('Recipe loaded:', response);
+    populateForm(response.recipe || response);
+  } catch (error) {
+    console.error('Failed to load recipe:', error);
+    alert(`Failed to load recipe: ${error.message}`);
+    goBack();
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+function addIngredient() {
+  recipeForm.value.ingredients.push({ quantity: '', unit: '', name: '' })
+}
+
+function removeIngredient(index) {
+  if (recipeForm.value.ingredients.length > 1) {
+    recipeForm.value.ingredients.splice(index, 1)
+  }
+}
+
+function addInstruction() {
+  recipeForm.value.instructions.push({ Steps: '' })
+}
+
+function removeInstruction(index) {
+  if (recipeForm.value.instructions.length > 1) {
+    recipeForm.value.instructions.splice(index, 1)
+  }
+}
+
+function removeImage() {
+  recipeForm.value.imageUrl = ''
+}
+
+function triggerFileInput() {
+  fileInput.value?.click()
+}
+
+function handleImageUpload(event) {
+  const file = event.target.files[0]
+  if (!file) return
+
+  const maxSize = 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    alert('Image file is too large. Please choose an image smaller than 5MB.')
+    return
+  }
+
+  if (!file.type.startsWith('image/')) {
+    alert('Please select a valid image file.')
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    recipeForm.value.imageUrl = e.target.result
+  }
+  reader.onerror = () => {
+    alert('Error reading the image file. Please try again.')
+  }
+  reader.readAsDataURL(file)
+}
+
+async function updateRecipe() {
+  if (!isFormValid.value) {
+    alert('Please fill in all required fields')
+    return
+  }
+
+  try {
+    isSaving.value = true;
+
+    const backendRecipeData = {
+      name: recipeForm.value.title,
+      description: recipeForm.value.description,
+      ingredients: recipeForm.value.ingredients
+        .filter(ing => ing.name.trim() !== '')
+        .map(ing => ({
+          name: ing.name,
+          quantity: parseFloat(ing.quantity) || 1,
+          unit: ing.unit || '',
+          notes: ''
+        })),
+      instructions: recipeForm.value.instructions
+        .filter(inst => inst.Steps.trim() !== '')
+        .map(inst => ({
+          Steps: inst.Steps
+        })),
+      time: `${recipeForm.value.cookTime} minutes`,
+      difficulty: parseInt(recipeForm.value.difficulty),
+      rating: 5
+    };
+
+    console.log('Updating recipe data:', backendRecipeData);
+
+    const response = await api.updateRecipe(props.recipeId, backendRecipeData);
+    
+    console.log('Recipe updated successfully:', response);
+    
+    alert(`Recipe "${recipeForm.value.title}" updated successfully!`);
+    
+    emit('recipe-updated', response.recipe);
+    goBack();
+
+  } catch (error) {
+    console.error('Failed to update recipe:', error);
+    alert(`Failed to update recipe: ${error.message}`);
+  } finally {
+    isSaving.value = false;
+  }
+}
+
+async function deleteRecipe() {
+  if (!confirm(`Are you sure you want to delete "${recipeForm.value.title}"? This action cannot be undone.`)) {
+    return;
+  }
+
+  try {
+    isSaving.value = true;
+    
+    await api.deleteRecipe(props.recipeId);
+    
+    alert(`Recipe "${recipeForm.value.title}" deleted successfully!`);
+    
+    emit('recipe-deleted', props.recipeId);
+    goBack();
+
+  } catch (error) {
+    console.error('Failed to delete recipe:', error);
+    alert(`Failed to delete recipe: ${error.message}`);
+  } finally {
+    isSaving.value = false;
+  }
+}
+
+function goBack() {
+  emit('go-home')
+}
 </script>
 
-
 <style scoped>
-
 /* ===== EDIT RECIPE PAGE STYLES ===== */
 .edit-recipe-page {
   min-height: 100vh;
@@ -928,5 +1113,4 @@ const recipeForm = ref({
     transition-duration: 0.01ms !important;
   }
 }
-
 </style>
