@@ -1,5 +1,34 @@
 <template>
  <div class="home-page">
+
+   <div v-if="showConfirmDialog" class="confirm-overlay" @click.self="cancelConfirm">
+     <div class="confirm-modal">
+       <div class="confirm-icon">{{ confirmDialog.icon }}</div>
+       <h3 class="confirm-title">{{ confirmDialog.title }}</h3>
+       <p class="confirm-message">{{ confirmDialog.message }}</p>
+       <div class="confirm-actions">
+         <button @click="cancelConfirm" class="btn-secondary">
+           {{ confirmDialog.cancelText }}
+         </button>
+         <button @click="confirmAction" class="btn-danger">
+           {{ confirmDialog.confirmText }}
+         </button>
+       </div>
+     </div>
+   </div>
+
+  
+   <div v-if="notification.show" class="notification-overlay">
+     <div :class="['notification', `notification-${notification.type}`]">
+       <div class="notification-icon">{{ notification.icon }}</div>
+       <div class="notification-content">
+         <div v-if="notification.title" class="notification-title">{{ notification.title }}</div>
+         <div class="notification-message">{{ notification.message }}</div>
+       </div>
+       <button class="notification-close" @click="hideNotification">✕</button>
+     </div>
+   </div>
+
    <Register 
      v-if="showLoginPage"
      :showBackButton="true"
@@ -80,7 +109,7 @@
                    Liked Recipes
                  </button>
                  <div class="dropdown-divider"></div>
-                 <button class="dropdown-item logout" @click="logout">
+                 <button class="dropdown-item logout" @click="showLogoutConfirm">
                    Logout
                  </button>
                </div>
@@ -100,17 +129,27 @@
      </nav>
 
      <div class="main-content-area">
-       <div v-if="isLoadingInitial" class="loading-container">
-         <div class="loading-spinner">⟳</div>
-         <p>Loading recipes...</p>
+       <div v-if="isLoadingInitial" class="loading-overlay">
+         <div class="loading-content">
+           <div class="loading-spinner">🍳</div>
+           <div class="loading-text">Loading delicious recipes...</div>
+         </div>
        </div>
 
-       <div v-else-if="apiError" class="error-container">
-         <div class="error-message">
-           <h3>⚠️ Connection Error</h3>
-           <p>{{ apiError }}</p>
-           <p>Showing sample recipes instead.</p>
-           <button @click="retryConnection" class="retry-btn">Retry Connection</button>
+       <div v-else-if="apiError" class="error-overlay" @click.self="closeError">
+         <div class="error-modal">
+           <div class="error-icon">⚠️</div>
+           <h3 class="error-title">Connection Error</h3>
+           <p class="error-message">{{ apiError }}</p>
+           <p class="error-message">Don't worry! We're showing sample recipes so you can still browse.</p>
+           <div class="error-actions">
+             <button @click="retryConnection" class="btn-primary">
+               🔄 Try Again
+             </button>
+             <button @click="closeError" class="btn-secondary">
+               📖 Browse Samples
+             </button>
+           </div>
          </div>
        </div>
 
@@ -122,7 +161,8 @@
        <ProfilePage 
          v-else-if="showProfile && isLoggedIn" 
          @go-home="goToHome" 
-         @go-to-create="goToCreateRecipe" 
+         @go-to-create="goToCreateRecipe"
+         @edit-recipe="handleEditRecipe"
        />
 
        <CreateRecipePage 
@@ -321,6 +361,75 @@ const apiError = ref('')
 const apiRecipes = ref([])
 const likedRecipeIds = ref(new Set())
 
+
+const showConfirmDialog = ref(false)
+const confirmDialog = ref({
+  title: '',
+  message: '',
+  icon: '',
+  confirmText: 'Confirm',
+  cancelText: 'Cancel',
+  onConfirm: null
+})
+
+const notification = ref({
+  show: false,
+  type: 'info', 
+  title: '',
+  message: '',
+  icon: ''
+})
+
+
+function showStyledConfirm(options) {
+  confirmDialog.value = {
+    title: options.title || 'Confirm Action',
+    message: options.message || 'Are you sure?',
+    icon: options.icon || '❓',
+    confirmText: options.confirmText || 'Confirm',
+    cancelText: options.cancelText || 'Cancel',
+    onConfirm: options.onConfirm || (() => {})
+  }
+  showConfirmDialog.value = true
+}
+
+function confirmAction() {
+  if (confirmDialog.value.onConfirm) {
+    confirmDialog.value.onConfirm()
+  }
+  showConfirmDialog.value = false
+}
+
+function cancelConfirm() {
+  showConfirmDialog.value = false
+}
+
+function showNotification(type, message, title = '') {
+  const iconMap = {
+    success: '✅',
+    error: '⚠️',
+    warning: '⚠️',
+    info: 'ℹ️'
+  }
+  
+  notification.value = {
+    show: true,
+    type,
+    title,
+    message,
+    icon: iconMap[type] || '🍳'
+  }
+  
+  
+  setTimeout(() => {
+    hideNotification()
+  }, 5000)
+}
+
+function hideNotification() {
+  notification.value.show = false
+}
+
 const api = {
  async request(endpoint, options = {}) {
    const url = `${API_BASE_URL}${endpoint}`;
@@ -396,9 +505,14 @@ function convertBackendRecipe(backendRecipe) {
   };
 }
 
+
+function closeError() {
+  apiError.value = '';
+}
+
+
 function handleEditRecipe(recipeId) {
   console.log('🚀 MAIN COMPONENT: handleEditRecipe called with ID:', recipeId)
-  
   
   const recipeToEditData = apiRecipes.value.find(recipe => 
     (recipe.id || recipe._id) === recipeId
@@ -406,7 +520,8 @@ function handleEditRecipe(recipeId) {
   
   if (!recipeToEditData) {
     console.error('Recipe not found in local data:', recipeId)
-    alert('Recipe not found!')
+
+    showNotification('error', 'Recipe not found. It may have been deleted.', 'Recipe Not Found');
     return
   }
   
@@ -429,19 +544,15 @@ function handleEditRecipe(recipeId) {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-  
-
 
 function handleRecipeUpdated(updatedRecipe) {
   console.log('Recipe updated:', updatedRecipe)
   
-
   const recipeIndex = apiRecipes.value.findIndex(recipe => 
     (recipe.id || recipe._id) === (updatedRecipe.id || updatedRecipe._id)
   )
   
   if (recipeIndex !== -1) {
-
     apiRecipes.value[recipeIndex] = convertBackendRecipe(updatedRecipe)
   }
   
@@ -449,25 +560,23 @@ function handleRecipeUpdated(updatedRecipe) {
   showProfile.value = true
 
   setTimeout(() => {
-    alert(`Recipe "${getRecipeTitle(updatedRecipe)}" updated successfully`)
+    showNotification('success', `"${getRecipeTitle(updatedRecipe)}" updated successfully`, 'Recipe Updated ✨');
   }, 100)
 }
 
 function handleRecipeDeleted(recipeId) {
   console.log('Recipe deleted:', recipeId)
   
-
   apiRecipes.value = apiRecipes.value.filter(recipe => 
     (recipe.id || recipe._id) !== recipeId
   )
   
-
   showEditRecipe.value = false
   showProfile.value = true
   
-
+  
   setTimeout(() => {
-    alert('Recipe deleted successfully')
+    showNotification('success', 'Recipe deleted successfully', 'Recipe Deleted 🗑️');
   }, 100)
 }
 
@@ -670,9 +779,10 @@ async function retryConnection() {
  await checkAuthStatus();
 }
 
+
 async function toggleLike(recipe) {
  if (!isLoggedIn.value) {
-   alert('Please log in to like recipes');
+   showNotification('warning', 'Please log in to like recipes', 'Login Required');
    return;
  }
 
@@ -683,9 +793,11 @@ async function toggleLike(recipe) {
    if (wasLiked) {
      await api.unlikeRecipe(recipeId);
      likedRecipeIds.value.delete(recipeId);
+     showNotification('info', `Removed "${getRecipeTitle(recipe)}" from favorites`, 'Recipe Unliked');
    } else {
      await api.likeRecipe(recipeId);
      likedRecipeIds.value.add(recipeId);
+     showNotification('success', `Added "${getRecipeTitle(recipe)}" to favorites!`, 'Recipe Liked ❤️');
    }
    
    recipe.isLiked = !wasLiked;
@@ -698,12 +810,12 @@ async function toggleLike(recipe) {
    
  } catch (error) {
    console.error('Failed to toggle like:', error);
-   alert('Failed to update like status');
+   showNotification('error', 'Failed to update like status. Please try again.', 'Connection Error');
  }
 }
 
 function openRecipe(recipe) {
- alert(`Opening recipe: ${getRecipeTitle(recipe)}`);
+ showNotification('info', `Opening "${getRecipeTitle(recipe)}"...`, 'Recipe Details');
 }
 
 function performSearch() {
@@ -729,7 +841,8 @@ function goToHome() {
 
 function goToCreateRecipe() {
  if (!isLoggedIn.value) {
-   alert('Please log in to create recipes');
+  
+   showNotification('warning', 'Please log in to share your culinary creations', 'Login Required');
    return;
  }
  showCreateRecipe.value = true;
@@ -742,9 +855,11 @@ function goToCreateRecipe() {
  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+
 function goToLikedRecipes() {
  if (!isLoggedIn.value) {
-   alert('Please log in to view liked recipes');
+
+   showNotification('warning', 'Please log in to view your favorite recipes', 'Login Required');
    return;
  }
  showProfileMenu.value = false;
@@ -757,13 +872,14 @@ function goToLikedRecipes() {
  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+
 function goToMyRecipes() {
  if (!isLoggedIn.value) {
-   alert('Please log in to view your recipes');
+   showNotification('warning', 'Please log in to view your recipes', 'Login Required');
    return;
  }
  showProfileMenu.value = false;
- alert('My recipes page - implement this with your existing component!');
+ showNotification('info', 'My recipes page - implement this with your existing component!', 'Coming Soon');
 }
 
 function goToProfile() {
@@ -794,6 +910,7 @@ function goBackToHome() {
  showLoginPage.value = false;
 }
 
+
 async function handleLoginFromRegister(userData) {
  isLoggedIn.value = true;
  showLoginPage.value = false;
@@ -813,7 +930,7 @@ async function handleLoginFromRegister(userData) {
  
  checkAuthStatus();
  setTimeout(() => {
-   alert(`Welcome back, ${currentUser.value.name || currentUser.value.username}! 🎉`);
+   showNotification('success', `Welcome back, ${currentUser.value.name || currentUser.value.username}!`, 'Login Successful 🎉');
  }, 500);
 }
 
@@ -823,29 +940,45 @@ function handleLoginSuccess(userData) {
  checkAuthStatus();
 }
 
-async function logout() {
+
+function showLogoutConfirm() {
  showProfileMenu.value = false;
  
- if (confirm('Are you sure you want to logout?')) {
-   try {
-     await api.logout();
-     isLoggedIn.value = false;
-     currentUser.value = null;
-     likedRecipeIds.value.clear();
-     
-     await checkAuthStatus();
-     
-     alert('Logged out successfully');
-     goToHome();
-   } catch (error) {
-     console.error('Logout failed:', error);
-     alert('Logout failed');
-   }
+ showStyledConfirm({
+   title: 'Confirm Logout',
+   message: 'Are you sure you want to logout? 👋',
+   icon: '👋',
+   confirmText: 'Yes, Logout',
+   cancelText: 'Stay Logged In',
+   onConfirm: performLogout
+ });
+}
+
+async function performLogout() {
+ try {
+   await api.logout();
+   isLoggedIn.value = false;
+   currentUser.value = null;
+   likedRecipeIds.value.clear();
+   
+   await checkAuthStatus();
+   
+
+   showNotification('info', 'Thanks for visiting FlavorCraft! Come back soon! 👋', 'Logged Out');
+   goToHome();
+ } catch (error) {
+   console.error('Logout failed:', error);
+   showNotification('error', 'Logout failed. Please try again.', 'Error');
  }
 }
 
+
+async function logout() {
+ showLogoutConfirm();
+}
+
 function applyFilters() {
- // Filter implementation
+
 }
 
 function clearFilters() {
@@ -856,12 +989,14 @@ function clearFilters() {
  activeSearchQuery.value = '';
 }
 
+
 function handleRecipeCreated(newRecipe) {
  const convertedRecipe = convertBackendRecipe(newRecipe);
  apiRecipes.value.unshift(convertedRecipe);
  
+
  setTimeout(() => {
-   alert(`🎉 "${getRecipeTitle(convertedRecipe)}" has been published successfully!`);
+   showNotification('success', `"${getRecipeTitle(convertedRecipe)}" has been published successfully!`, 'Recipe Published 🎉');
  }, 100);
 }
 
