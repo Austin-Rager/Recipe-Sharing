@@ -556,7 +556,7 @@ function goBack() {
 }
 </script>
 
-<style>
+<style scoped>
 /* ===== EDIT RECIPE PAGE STYLES ===== */
 .edit-recipe-page {
   min-height: 100vh;
@@ -1113,3 +1113,4 @@ function goBack() {
     transition-duration: 0.01ms !important;
   }
 }
+</style>

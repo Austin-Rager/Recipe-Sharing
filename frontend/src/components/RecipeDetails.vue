@@ -2,7 +2,7 @@
   <div class="recipe-details-page">
     <div class="recipe-details">
       <!-- Recipe Header Section -->
-      <div class="recipe-header">
+      <div class="recipe-header" v-if="recipe">
         <div class="recipe-image">
           <img :src="recipe.image" :alt="recipe.title" />
         </div>
@@ -10,7 +10,7 @@
           <h1 class="recipe-title">{{ recipe.title }}</h1>
           <p class="recipe-description">{{ recipe.description }}</p>
           
-          <div class="recipe-meta">
+          <div class="recipe-meta" v-if="recipe">
             <div class="rating">
               <span class="stars">{{ '★'.repeat(Math.floor(recipe.rating)) }}{{ '☆'.repeat(5 - Math.floor(recipe.rating)) }}</span>
               <span class="rating-text">{{ recipe.rating }}/5</span>
@@ -27,6 +27,9 @@
 
           <!-- Action Buttons -->
           <div class="action-buttons">
+            <button class="btn btn-home" @click="goToHome">
+              <span>← Back to Home</span>
+            </button>
             <button class="btn btn-like" @click="likeRecipe">
               <span>{{ recipe.isLiked ? '❤️ Liked' : '🤍 Like' }}</span>
             </button>
@@ -41,7 +44,7 @@
       </div>
 
       <!-- Content Section -->
-      <div class="recipe-content">
+      <div class="recipe-content" v-if="recipe">
         <!-- Steps Section (Left) -->
         <div class="steps-section">
           <h2>Instructions</h2>
@@ -73,9 +76,19 @@
           </div>
           
           <!-- Progress indicator -->
-          <div class="progress-section" v-if="recipe.ingredients.length > 0">
-            <div class="progress-text">
-              {{ checkedCount }}/{{ recipe.ingredients.length }} ingredients gathered
+          <div class="progress-section" v-if="recipe.ingredients && recipe.ingredients.length > 0">
+            <div class="progress-header">
+              <div class="progress-text">
+                {{ checkedCount }}/{{ recipe.ingredients.length }} ingredients gathered
+              </div>
+              <button 
+                class="clear-progress-btn"
+                @click="clearIngredientProgress"
+                :disabled="checkedCount === 0"
+                title="Clear all ingredient progress"
+              >
+                Clear Progress
+              </button>
             </div>
             <div class="progress-bar">
               <div 
@@ -91,55 +104,75 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
 const props = defineProps({
-  recipeId: {
-    type: String,
+  recipeData: {
+    type: Object,
     required: true
   }
 })
 
-const searchQuery = ref('')
-const showProfileMenu = ref(false)
-const currentUser = ref({
-  name: 'Julia Souza',
-  email: 'julia@flavorcraft.com'
-})
+const emit = defineEmits(['go-home'])
 
 // Ingredients checklist state
 const checkedIngredients = ref({})
 
-const recipe = ref({
-  title: "Chocolate Chip Cookies",
-  description: "Classic homemade chocolate chip cookies that are crispy on the outside and chewy on the inside.",
-  image: "https://via.placeholder.com/400x300",
-  rating: 4.5,
-  difficulty: "Easy",
-  time: "45 minutes",
-  isLiked: false,
-  steps: [
-    "Preheat oven to 375°F (190°C)",
-    "In a large bowl, cream together butter and sugars until light and fluffy",
-    "Beat in eggs one at a time, then add vanilla extract",
-    "In a separate bowl, whisk together flour, baking soda, and salt",
-    "Gradually mix dry ingredients into wet ingredients",
-    "Fold in chocolate chips",
-    "Drop rounded tablespoons of dough onto ungreased baking sheets",
-    "Bake for 9-11 minutes until golden brown",
-    "Cool on baking sheet for 5 minutes before transferring to wire rack"
-  ],
-  ingredients: [
-    "2½ cups all-purpose flour",
-    "1 tsp baking soda",
-    "1 tsp salt",
-    "1 cup butter, softened",
-    "¾ cup granulated sugar",
-    "¾ cup packed brown sugar",
-    "2 large eggs",
-    "2 tsp vanilla extract",
-    "2 cups chocolate chips"
-  ]
+// Use the recipe data from props
+const recipe = computed(() => {
+  if (!props.recipeData) return null;
+  
+  // Transform instructions - handle both string arrays and object arrays
+  const transformInstructions = (instructions) => {
+    if (!instructions || !Array.isArray(instructions)) return [];
+    
+    return instructions.map(instruction => {
+      // If it's already a string, return as is
+      if (typeof instruction === 'string') return instruction;
+      
+      // If it's an object with Steps property, extract the Steps
+      if (instruction.Steps) return instruction.Steps;
+      
+      // Fallback to string representation
+      return instruction.toString();
+    });
+  };
+  
+  // Transform ingredients - handle both string arrays and object arrays
+  const transformIngredients = (ingredients) => {
+    if (!ingredients || !Array.isArray(ingredients)) return [];
+    
+    return ingredients.map(ingredient => {
+      // If it's already a string, return as is
+      if (typeof ingredient === 'string') return ingredient;
+      
+      // If it's an object with name, quantity, unit properties
+      if (ingredient.name) {
+        const quantity = ingredient.quantity || '';
+        const unit = ingredient.unit || '';
+        const name = ingredient.name || '';
+        
+        // Format: "1 cup water" or "2 pieces onion"
+        return `${quantity} ${unit} ${name}`.trim();
+      }
+      
+      // Fallback to string representation
+      return ingredient.toString();
+    });
+  };
+  
+  return {
+    title: props.recipeData.title || props.recipeData.name || 'Recipe',
+    description: props.recipeData.description || 'Delicious recipe',
+    image: props.recipeData.image || 
+           (props.recipeData.images?.length > 0 ? props.recipeData.images[0].url : 'https://via.placeholder.com/400x300'),
+    rating: props.recipeData.rating || 4.0,
+    difficulty: props.recipeData.difficulty || 'Easy',
+    time: props.recipeData.time || (props.recipeData.cookTime ? `${props.recipeData.cookTime}min` : '30 minutes'),
+    isLiked: props.recipeData.isLiked || false,
+    steps: transformInstructions(props.recipeData.instructions || props.recipeData.steps || []),
+    ingredients: transformIngredients(props.recipeData.ingredients || [])
+  };
 })
 
 // Computed properties for progress tracking
@@ -148,19 +181,41 @@ const checkedCount = computed(() => {
 })
 
 const progressPercentage = computed(() => {
-  if (recipe.value.ingredients.length === 0) return 0
+  if (!recipe.value || !recipe.value.ingredients || recipe.value.ingredients.length === 0) return 0
   return Math.round((checkedCount.value / recipe.value.ingredients.length) * 100)
 })
 
+// LocalStorage helpers for ingredient checklist persistence
+const getStorageKey = (recipeId) => `recipe-ingredients-${recipeId}`
+
+const saveIngredientState = (recipeId, checkedState) => {
+  try {
+    localStorage.setItem(getStorageKey(recipeId), JSON.stringify(checkedState))
+  } catch (error) {
+    console.warn('Failed to save ingredient state to localStorage:', error)
+  }
+}
+
+const loadIngredientState = (recipeId) => {
+  try {
+    const saved = localStorage.getItem(getStorageKey(recipeId))
+    return saved ? JSON.parse(saved) : {}
+  } catch (error) {
+    console.warn('Failed to load ingredient state from localStorage:', error)
+    return {}
+  }
+}
+
 // Methods
 const likeRecipe = () => {
-  recipe.value.isLiked = !recipe.value.isLiked
-  console.log(recipe.value.isLiked ? 'Recipe liked!' : 'Recipe unliked!')
+  if (recipe.value) {
+    recipe.value.isLiked = !recipe.value.isLiked
+    console.log(recipe.value.isLiked ? 'Recipe liked!' : 'Recipe unliked!')
+  }
 }
 
 const editRecipe = () => {
   console.log('Navigate to edit recipe page')
-  // TODO: Navigate to edit component
   alert('Edit functionality - coming soon!')
 }
 
@@ -168,61 +223,67 @@ const saveRecipe = () => {
   console.log('Recipe saved!')
 }
 
-//nav methods 
+// Clear ingredient progress for current recipe
+const clearIngredientProgress = () => {
+  if (recipe.value) {
+    const recipeId = recipe.value.id || props.recipeData?.id || props.recipeData?._id || 'unknown'
+    try {
+      localStorage.removeItem(getStorageKey(recipeId))
+      // Reset all ingredients to unchecked
+      const newCheckedState = {}
+      recipe.value.ingredients.forEach((_, index) => {
+        newCheckedState[index] = false
+      })
+      checkedIngredients.value = newCheckedState
+      console.log('Ingredient progress cleared!')
+    } catch (error) {
+      console.warn('Failed to clear ingredient progress:', error)
+    }
+  }
+}
+
+// Navigation method
 function goToHome() {
- window.scrollTo({ top: 0, behavior: 'smooth' })
- showLiked.value = false
- showRecipeDetails.value = false
- clearFilters() // Clear filters when going home
- console.log('going to home page')
+  emit('go-home')
 }
 
-function goToCreateRecipe() {
- alert('create recipe page - backend not ready yet!')
- console.log('going to create recipe page')
-}
-
-function toggleProfileMenu() {
- showProfileMenu.value = !showProfileMenu.value
-}
-
-function goToProfile() {
- showProfileMenu.value = false
- alert('profile page - backend not ready yet!')
- console.log('going to profile page')
-}
-
-function goToLikedRecipes() {
- showProfileMenu.value = false
- showLiked.value = true
- showRecipeDetails.value = false
- window.scrollTo({ top: 0, behavior: 'smooth' })
- console.log('showing liked recipes')
-}
-
-function goToMyRecipes() {
- showProfileMenu.value = false
- alert('my recipes page - backend not ready yet!')
- console.log('going to my recipes page')
-
-}
-
-function logout() {
- showProfileMenu.value = false
- 
- if (confirm('are you sure you want to logout?')) {
-   alert('logout functionality - backend not ready yet!')
-   console.log('logging out...')
- }
-}
-
-// Initialize checklist state
-onMounted(() => {
-  // Initialize all ingredients as unchecked
-  recipe.value.ingredients.forEach((_, index) => {
-    checkedIngredients.value[index] = false
+// Initialize checklist state with localStorage persistence
+const initializeIngredients = (recipeData) => {
+  if (!recipeData || !recipeData.ingredients) return
+  
+  const recipeId = recipeData.id || recipeData._id || 'unknown'
+  const savedState = loadIngredientState(recipeId)
+  
+  // Initialize checklist with saved state or default to false
+  const newCheckedState = {}
+  recipeData.ingredients.forEach((_, index) => {
+    newCheckedState[index] = savedState[index] || false
   })
+  
+  checkedIngredients.value = newCheckedState
+}
+
+// Watch for ingredient changes to save to localStorage
+watch(checkedIngredients, (newState) => {
+  if (recipe.value && Object.keys(newState).length > 0) {
+    const recipeId = recipe.value.id || props.recipeData?.id || props.recipeData?._id || 'unknown'
+    saveIngredientState(recipeId, newState)
+  }
+}, { deep: true })
+
+// Initialize checklist state on mount
+onMounted(() => {
+  if (props.recipeData) {
+    initializeIngredients(props.recipeData)
+  }
 })
+
+// Watch for recipe changes to reinitialize checklist
+watch(() => props.recipeData, (newRecipe) => {
+  if (newRecipe) {
+    initializeIngredients(newRecipe)
+  }
+}, { immediate: true })
 </script>
 
 <style scoped>
@@ -595,6 +656,17 @@ onMounted(() => {
   background: var(--primary-hover);
 }
 
+.btn-home {
+  background: var(--background-secondary);
+  color: var(--text-primary);
+  border: 2px solid var(--background-tertiary);
+}
+
+.btn-home:hover {
+  background: var(--background-tertiary);
+  color: var(--text-primary);
+}
+
 .recipe-content {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -638,7 +710,7 @@ onMounted(() => {
   content: counter(step-counter);
   position: absolute;
   left: -15px;
-  top: var(--space-6);
+  top: 1.3rem;
   background: var(--primary-color);
   color: white;
   width: 32px;
@@ -650,6 +722,7 @@ onMounted(() => {
   font-weight: 700;
   font-size: var(--font-size-sm);
   box-shadow: var(--shadow-md);
+  line-height: 50px;
 }
 
 /* ===== INGREDIENTS CHECKLIST STYLES ===== */
@@ -726,12 +799,41 @@ onMounted(() => {
   border: 1px solid var(--background-tertiary);
 }
 
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
 .progress-text {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
-  margin-bottom: var(--space-3);
-  text-align: center;
   font-weight: 600;
+}
+
+.clear-progress-btn {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  background: var(--background-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--background-tertiary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.clear-progress-btn:hover:not(:disabled) {
+  background: var(--warning-color);
+  color: white;
+  border-color: var(--warning-color);
+}
+
+.clear-progress-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--background-tertiary);
+  color: var(--text-muted);
 }
 
 .progress-bar {
