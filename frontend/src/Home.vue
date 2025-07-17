@@ -570,41 +570,6 @@ function handleEditRecipe(recipeId) {
 }
 
 
-function handleRecipeUpdated(updatedRecipe) {
-  console.log('Recipe updated:', updatedRecipe)
-  
-  const recipeIndex = apiRecipes.value.findIndex(recipe => 
-    (recipe.id || recipe._id) === (updatedRecipe.id || updatedRecipe._id)
-  )
-  
-  if (recipeIndex !== -1) {
-    apiRecipes.value[recipeIndex] = convertBackendRecipe(updatedRecipe)
-  }
-  
-  showEditRecipe.value = false
-  showProfile.value = true
-
-  setTimeout(() => {
-    showNotification('success', `"${getRecipeTitle(updatedRecipe)}" updated successfully`, 'Recipe Updated ✨');
-  }, 100)
-}
-
-function handleRecipeDeleted(recipeId) {
-  console.log('Recipe deleted:', recipeId)
-  
-  apiRecipes.value = apiRecipes.value.filter(recipe => 
-    (recipe.id || recipe._id) !== recipeId
-  )
-  
-  showEditRecipe.value = false
-  showProfile.value = true
-  
-  
-  setTimeout(() => {
-    showNotification('success', 'Recipe deleted successfully', 'Recipe Deleted 🗑️');
-  }, 100)
-}
-
 function parseTime(timeString) {
  if (!timeString) return 30;
  const match = timeString.match(/(\d+)/);
@@ -1050,18 +1015,6 @@ function handleRecipeCreated(newRecipe) {
 
  setTimeout(() => {
    showNotification('success', `"${getRecipeTitle(convertedRecipe)}" has been published successfully!`, 'Recipe Published 🎉');
- }, 100);
-}
-
-function handleRecipeUpdated(updatedRecipe) {
- const convertedRecipe = convertBackendRecipe(updatedRecipe);
- const index = apiRecipes.value.findIndex(r => getRecipeId(r) === getRecipeId(convertedRecipe));
- if (index !== -1) {
-   apiRecipes.value[index] = convertedRecipe;
- }
- 
- setTimeout(() => {
-   alert(`🎉 "${getRecipeTitle(convertedRecipe)}" has been updated successfully!`);
  }, 100);
 }
 
