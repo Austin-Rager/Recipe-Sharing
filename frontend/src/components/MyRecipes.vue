@@ -1,6 +1,8 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 
+const emit = defineEmits(['go-home', 'recipe-selected']);
+
 // API function to fetch user's recipes
 async function fetchUserRecipes() {
     try {
@@ -90,7 +92,7 @@ function getDifficultyText(difficulty) {
 
 function openRecipe(recipe) {
   console.log('Opening recipe:', recipe.name);
-  // Navigation logic here
+  emit('recipe-selected', recipe);
 }
 
 function editRecipe(recipe) {
@@ -133,7 +135,7 @@ function handleSearch() {
 
 function goToHome() {
   console.log('Going to home page');
-  // Navigation logic here
+  emit('go-home');
 }
 
 function toggleProfileMenu() {

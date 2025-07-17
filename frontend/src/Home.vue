@@ -1,5 +1,34 @@
 <template>
  <div class="home-page">
+
+   <div v-if="showConfirmDialog" class="confirm-overlay" @click.self="cancelConfirm">
+     <div class="confirm-modal">
+       <div class="confirm-icon">{{ confirmDialog.icon }}</div>
+       <h3 class="confirm-title">{{ confirmDialog.title }}</h3>
+       <p class="confirm-message">{{ confirmDialog.message }}</p>
+       <div class="confirm-actions">
+         <button @click="cancelConfirm" class="btn-secondary">
+           {{ confirmDialog.cancelText }}
+         </button>
+         <button @click="confirmAction" class="btn-danger">
+           {{ confirmDialog.confirmText }}
+         </button>
+       </div>
+     </div>
+   </div>
+
+  
+   <div v-if="notification.show" class="notification-overlay">
+     <div :class="['notification', `notification-${notification.type}`]">
+       <div class="notification-icon">{{ notification.icon }}</div>
+       <div class="notification-content">
+         <div v-if="notification.title" class="notification-title">{{ notification.title }}</div>
+         <div class="notification-message">{{ notification.message }}</div>
+       </div>
+       <button class="notification-close" @click="hideNotification">✕</button>
+     </div>
+   </div>
+
    <Register 
      v-if="showLoginPage"
      :showBackButton="true"
@@ -80,7 +109,7 @@
                    Liked Recipes
                  </button>
                  <div class="dropdown-divider"></div>
-                 <button class="dropdown-item logout" @click="logout">
+                 <button class="dropdown-item logout" @click="showLogoutConfirm">
                    Logout
                  </button>
                </div>
@@ -100,29 +129,47 @@
      </nav>
 
      <div class="main-content-area">
-       <div v-if="isLoadingInitial" class="loading-container">
-         <div class="loading-spinner">⟳</div>
-         <p>Loading recipes...</p>
+       <div v-if="isLoadingInitial" class="loading-overlay">
+         <div class="loading-content">
+           <div class="loading-spinner">🍳</div>
+           <div class="loading-text">Loading delicious recipes...</div>
+         </div>
        </div>
 
-       <div v-else-if="apiError" class="error-container">
-         <div class="error-message">
-           <h3>⚠️ Connection Error</h3>
-           <p>{{ apiError }}</p>
-           <p>Showing sample recipes instead.</p>
-           <button @click="retryConnection" class="retry-btn">Retry Connection</button>
+       <div v-else-if="apiError" class="error-overlay" @click.self="closeError">
+         <div class="error-modal">
+           <div class="error-icon">⚠️</div>
+           <h3 class="error-title">Connection Error</h3>
+           <p class="error-message">{{ apiError }}</p>
+           <p class="error-message">Don't worry! We're showing sample recipes so you can still browse.</p>
+           <div class="error-actions">
+             <button @click="retryConnection" class="btn-primary">
+               🔄 Try Again
+             </button>
+             <button @click="closeError" class="btn-secondary">
+               📖 Browse Samples
+             </button>
+           </div>
          </div>
        </div>
 
        <LikedPage 
          v-else-if="showLiked && isLoggedIn" 
          @go-home="goToHome" 
+         @open-recipe="openRecipe"
        />
        
        <ProfilePage 
          v-else-if="showProfile && isLoggedIn" 
          @go-home="goToHome" 
-         @go-to-create="goToCreateRecipe" 
+         @go-to-create="goToCreateRecipe"
+         @edit-recipe="handleEditRecipe"
+       />
+
+       <MyRecipesPage 
+         v-else-if="showMyRecipes && isLoggedIn" 
+         @go-home="goToHome" 
+         @recipe-selected="openRecipe"
        />
 
        <CreateRecipePage 
@@ -130,6 +177,20 @@
          @go-home="goToHome"
          @recipe-created="handleRecipeCreated"
        />
+
+    <EditRecipePage 
+      v-else-if="showEditRecipe && recipeToEdit"
+      :recipe-id="recipeToEdit"
+      @go-home="goToHome"
+      @recipe-updated="handleRecipeUpdated"
+      @recipe-deleted="handleRecipeDeleted"
+    />
+
+    <RecipeDetails 
+      v-else-if="showRecipeDetails && selectedRecipe"
+      :recipe-data="selectedRecipe"
+      @go-home="goToHome"
+    />
 
        <div v-else>
          <div class="main-content">
@@ -286,7 +347,10 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import LikedPage from './components/LikedPage.vue';
 import ProfilePage from './components/MyProfile.vue';
 import CreateRecipePage from './components/CreateRecipe.vue';
+import EditRecipePage from './components/EditRecipe.vue';
+import MyRecipesPage from './components/MyRecipes.vue';
 import Register from './components/Register.vue';
+import RecipeDetails from './components/RecipeDetails.vue';
 
 const API_BASE_URL = 'http://localhost:8080';
 
@@ -296,7 +360,12 @@ const showFilters = ref(false)
 const showLiked = ref(false) 
 const showProfile = ref(false)
 const showCreateRecipe = ref(false)
+const showEditRecipe = ref(false)
+const recipeToEdit = ref(null)
 const showLoginPage = ref(false)
+const showRecipeDetails = ref(false)
+const showMyRecipes = ref(false)
+const selectedRecipe = ref(null)
 const selectedDifficulties = ref([])
 const minRating = ref('') 
 const maxCookTime = ref('') 
@@ -309,6 +378,75 @@ const apiError = ref('')
 
 const apiRecipes = ref([])
 const likedRecipeIds = ref(new Set())
+
+
+const showConfirmDialog = ref(false)
+const confirmDialog = ref({
+  title: '',
+  message: '',
+  icon: '',
+  confirmText: 'Confirm',
+  cancelText: 'Cancel',
+  onConfirm: null
+})
+
+const notification = ref({
+  show: false,
+  type: 'info', 
+  title: '',
+  message: '',
+  icon: ''
+})
+
+
+function showStyledConfirm(options) {
+  confirmDialog.value = {
+    title: options.title || 'Confirm Action',
+    message: options.message || 'Are you sure?',
+    icon: options.icon || '❓',
+    confirmText: options.confirmText || 'Confirm',
+    cancelText: options.cancelText || 'Cancel',
+    onConfirm: options.onConfirm || (() => {})
+  }
+  showConfirmDialog.value = true
+}
+
+function confirmAction() {
+  if (confirmDialog.value.onConfirm) {
+    confirmDialog.value.onConfirm()
+  }
+  showConfirmDialog.value = false
+}
+
+function cancelConfirm() {
+  showConfirmDialog.value = false
+}
+
+function showNotification(type, message, title = '') {
+  const iconMap = {
+    success: '✅',
+    error: '⚠️',
+    warning: '⚠️',
+    info: 'ℹ️'
+  }
+  
+  notification.value = {
+    show: true,
+    type,
+    title,
+    message,
+    icon: iconMap[type] || '🍳'
+  }
+  
+  
+  setTimeout(() => {
+    hideNotification()
+  }, 5000)
+}
+
+function hideNotification() {
+  notification.value.show = false
+}
 
 const api = {
  async request(endpoint, options = {}) {
@@ -341,6 +479,10 @@ const api = {
 
  async getAllRecipes() {
    return this.request('/recipes');
+ },
+
+ async getRecipeById(id) {
+   return this.request(`/recipe/${id}`);
  },
 
  async getLikedRecipes() {
@@ -383,6 +525,81 @@ function convertBackendRecipe(backendRecipe) {
     instructions: backendRecipe.instructions,
     _original: backendRecipe
   };
+}
+
+
+function closeError() {
+  apiError.value = '';
+}
+
+
+function handleEditRecipe(recipeId) {
+  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with ID:', recipeId)
+  
+  const recipeToEditData = apiRecipes.value.find(recipe => 
+    (recipe.id || recipe._id) === recipeId
+  )
+  
+  if (!recipeToEditData) {
+    console.error('Recipe not found in local data:', recipeId)
+
+    showNotification('error', 'Recipe not found. It may have been deleted.', 'Recipe Not Found');
+    return
+  }
+  
+  console.log('🚀 Found recipe data:', recipeToEditData)
+  
+  recipeToEdit.value = recipeToEditData  
+  showEditRecipe.value = true
+  showProfile.value = false
+  showLiked.value = false
+  showCreateRecipe.value = false
+  showLoginPage.value = false
+  showProfileMenu.value = false
+  
+  console.log('🚀 State after update:', { 
+    showEditRecipe: showEditRecipe.value, 
+    showProfile: showProfile.value,
+    recipeToEdit: !!recipeToEdit.value 
+  })
+  
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+
+function handleRecipeUpdated(updatedRecipe) {
+  console.log('Recipe updated:', updatedRecipe)
+  
+  const recipeIndex = apiRecipes.value.findIndex(recipe => 
+    (recipe.id || recipe._id) === (updatedRecipe.id || updatedRecipe._id)
+  )
+  
+  if (recipeIndex !== -1) {
+    apiRecipes.value[recipeIndex] = convertBackendRecipe(updatedRecipe)
+  }
+  
+  showEditRecipe.value = false
+  showProfile.value = true
+
+  setTimeout(() => {
+    showNotification('success', `"${getRecipeTitle(updatedRecipe)}" updated successfully`, 'Recipe Updated ✨');
+  }, 100)
+}
+
+function handleRecipeDeleted(recipeId) {
+  console.log('Recipe deleted:', recipeId)
+  
+  apiRecipes.value = apiRecipes.value.filter(recipe => 
+    (recipe.id || recipe._id) !== recipeId
+  )
+  
+  showEditRecipe.value = false
+  showProfile.value = true
+  
+  
+  setTimeout(() => {
+    showNotification('success', 'Recipe deleted successfully', 'Recipe Deleted 🗑️');
+  }, 100)
 }
 
 function parseTime(timeString) {
@@ -449,7 +666,6 @@ function getRecipeImage(recipe) {
   if (recipe.images?.length > 0) return recipe.images[0].url;
   console.log("image loaded")
   return "../assets/fork-plate-knife.svg"; 
-
 }
 
 function getRecipeRating(recipe) {
@@ -585,9 +801,10 @@ async function retryConnection() {
  await checkAuthStatus();
 }
 
+
 async function toggleLike(recipe) {
  if (!isLoggedIn.value) {
-   alert('Please log in to like recipes');
+   showNotification('warning', 'Please log in to like recipes', 'Login Required');
    return;
  }
 
@@ -598,9 +815,11 @@ async function toggleLike(recipe) {
    if (wasLiked) {
      await api.unlikeRecipe(recipeId);
      likedRecipeIds.value.delete(recipeId);
+     showNotification('info', `Removed "${getRecipeTitle(recipe)}" from favorites`, 'Recipe Unliked');
    } else {
      await api.likeRecipe(recipeId);
      likedRecipeIds.value.add(recipeId);
+     showNotification('success', `Added "${getRecipeTitle(recipe)}" to favorites!`, 'Recipe Liked ❤️');
    }
    
    recipe.isLiked = !wasLiked;
@@ -613,12 +832,32 @@ async function toggleLike(recipe) {
    
  } catch (error) {
    console.error('Failed to toggle like:', error);
-   alert('Failed to update like status');
+   showNotification('error', 'Failed to update like status. Please try again.', 'Connection Error');
  }
 }
 
-function openRecipe(recipe) {
- alert(`Opening recipe: ${getRecipeTitle(recipe)}`);
+async function openRecipe(recipe) {
+  try {
+    // If we have basic recipe data, show it immediately
+    selectedRecipe.value = recipe;
+    showRecipeDetails.value = true;
+    showLiked.value = false;
+    showProfile.value = false;
+    showCreateRecipe.value = false;
+    showLoginPage.value = false;
+    showMyRecipes.value = false;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Then try to fetch complete recipe data if we have an ID
+    const recipeId = getRecipeId(recipe);
+    if (recipeId && !recipe.ingredients) {
+      const fullRecipe = await api.getRecipeById(recipeId);
+      selectedRecipe.value = convertBackendRecipe(fullRecipe.recipe);
+    }
+  } catch (error) {
+    console.error('Failed to fetch recipe details:', error);
+    // Continue with the basic recipe data we have
+  }
 }
 
 function performSearch() {
@@ -635,44 +874,60 @@ function goToHome() {
  showLiked.value = false;
  showProfile.value = false;
  showCreateRecipe.value = false;
+ showEditRecipe.value = false;
  showLoginPage.value = false;
+ showRecipeDetails.value = false;
+ showMyRecipes.value = false;
  showProfileMenu.value = false;
+ selectedRecipe.value = null;
  clearFilters();
 }
 
 function goToCreateRecipe() {
  if (!isLoggedIn.value) {
-   alert('Please log in to create recipes');
+  
+   showNotification('warning', 'Please log in to share your culinary creations', 'Login Required');
    return;
  }
  showCreateRecipe.value = true;
  showLiked.value = false;
  showProfile.value = false;
+ showEditRecipe.value = false;
  showLoginPage.value = false;
+ showRecipeDetails.value = false;
+ showMyRecipes.value = false;
  showProfileMenu.value = false;
+ selectedRecipe.value = null;
  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+
 function goToLikedRecipes() {
  if (!isLoggedIn.value) {
-   alert('Please log in to view liked recipes');
+
+   showNotification('warning', 'Please log in to view your favorite recipes', 'Login Required');
    return;
  }
  showProfileMenu.value = false;
  showLiked.value = true;
  showProfile.value = false;
  showCreateRecipe.value = false;
+ showEditRecipe.value = false;
  showLoginPage.value = false;
+ showRecipeDetails.value = false;
+ showMyRecipes.value = false;
+ selectedRecipe.value = null;
  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+
 function goToMyRecipes() {
  if (!isLoggedIn.value) {
-   alert('Please log in to view your recipes');
+   showNotification('warning', 'Please log in to view your recipes', 'Login Required');
    return;
  }
  showProfileMenu.value = false;
- alert('My recipes page - implement this with your existing component!');
+ showNotification('info', 'My recipes page - implement this with your existing component!', 'Coming Soon');
 }
 
 function goToProfile() {
@@ -681,7 +936,11 @@ function goToProfile() {
  showProfile.value = true;
  showLiked.value = false;
  showCreateRecipe.value = false;
+ showEditRecipe.value = false;
  showLoginPage.value = false;
+ showRecipeDetails.value = false;
+ showMyRecipes.value = false;
+ selectedRecipe.value = null;
  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -700,6 +959,7 @@ function showRegister() {
 function goBackToHome() {
  showLoginPage.value = false;
 }
+
 
 async function handleLoginFromRegister(userData) {
  isLoggedIn.value = true;
@@ -720,7 +980,7 @@ async function handleLoginFromRegister(userData) {
  
  checkAuthStatus();
  setTimeout(() => {
-   alert(`Welcome back, ${currentUser.value.name || currentUser.value.username}! 🎉`);
+   showNotification('success', `Welcome back, ${currentUser.value.name || currentUser.value.username}!`, 'Login Successful 🎉');
  }, 500);
 }
 
@@ -730,29 +990,45 @@ function handleLoginSuccess(userData) {
  checkAuthStatus();
 }
 
-async function logout() {
+
+function showLogoutConfirm() {
  showProfileMenu.value = false;
  
- if (confirm('Are you sure you want to logout?')) {
-   try {
-     await api.logout();
-     isLoggedIn.value = false;
-     currentUser.value = null;
-     likedRecipeIds.value.clear();
-     
-     await checkAuthStatus();
-     
-     alert('Logged out successfully');
-     goToHome();
-   } catch (error) {
-     console.error('Logout failed:', error);
-     alert('Logout failed');
-   }
+ showStyledConfirm({
+   title: 'Confirm Logout',
+   message: 'Are you sure you want to logout? 👋',
+   icon: '👋',
+   confirmText: 'Yes, Logout',
+   cancelText: 'Stay Logged In',
+   onConfirm: performLogout
+ });
+}
+
+async function performLogout() {
+ try {
+   await api.logout();
+   isLoggedIn.value = false;
+   currentUser.value = null;
+   likedRecipeIds.value.clear();
+   
+   await checkAuthStatus();
+   
+
+   showNotification('info', 'Thanks for visiting FlavorCraft! Come back soon! 👋', 'Logged Out');
+   goToHome();
+ } catch (error) {
+   console.error('Logout failed:', error);
+   showNotification('error', 'Logout failed. Please try again.', 'Error');
  }
 }
 
+
+async function logout() {
+ showLogoutConfirm();
+}
+
 function applyFilters() {
- // Filter implementation
+
 }
 
 function clearFilters() {
@@ -763,12 +1039,37 @@ function clearFilters() {
  activeSearchQuery.value = '';
 }
 
+
 function handleRecipeCreated(newRecipe) {
  const convertedRecipe = convertBackendRecipe(newRecipe);
  apiRecipes.value.unshift(convertedRecipe);
  
+
  setTimeout(() => {
-   alert(`🎉 "${getRecipeTitle(convertedRecipe)}" has been published successfully!`);
+   showNotification('success', `"${getRecipeTitle(convertedRecipe)}" has been published successfully!`, 'Recipe Published 🎉');
+ }, 100);
+}
+
+function handleRecipeUpdated(updatedRecipe) {
+ const convertedRecipe = convertBackendRecipe(updatedRecipe);
+ const index = apiRecipes.value.findIndex(r => getRecipeId(r) === getRecipeId(convertedRecipe));
+ if (index !== -1) {
+   apiRecipes.value[index] = convertedRecipe;
+ }
+ 
+ setTimeout(() => {
+   alert(`🎉 "${getRecipeTitle(convertedRecipe)}" has been updated successfully!`);
+ }, 100);
+}
+
+function handleRecipeDeleted(recipeId) {
+ const index = apiRecipes.value.findIndex(r => getRecipeId(r) === recipeId);
+ if (index !== -1) {
+   apiRecipes.value.splice(index, 1);
+ }
+ 
+ setTimeout(() => {
+   alert(`Recipe has been deleted successfully!`);
  }, 100);
 }
 
@@ -1012,19 +1313,43 @@ body {
 }
 
 /* Navigation Actions */
-.nav-actions {
+/* Only target auth buttons (login/register) when not logged in */
+.auth-buttons {
   display: flex;
   align-items: center;
-  gap: var(--space-6);
+  gap: var(--space-4);
+  flex-direction: row;
 }
 
+.auth-buttons .nav-btn {
+  padding: var(--space-3) var(--space-6);
+  background: var(--primary-color);
+  color: white;
+  border: 2px solid transparent;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.auth-buttons .nav-btn:hover {
+  background: var(--primary-hover);
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* Keep the logged-in nav buttons unchanged */
 .nav-buttons {
   display: flex;
   align-items: center;
   gap: var(--space-6);
 }
 
-.nav-btn {
+.nav-buttons .nav-btn {
+  /* Keep existing styles for logged-in buttons */
   padding: var(--space-3) var(--space-6);
   border: 2px solid transparent;
   background: var(--background-secondary);
@@ -1037,12 +1362,22 @@ body {
   transition: all var(--transition-fast);
 }
 
-.nav-btn:hover {
+.nav-buttons .home-btn,
+.nav-buttons .liked-btn {
   background: var(--primary-color);
+  color: white;
+}
+
+.nav-buttons .create-btn {
+  background: var(--success-color);
+  color: white;
+}
+
+.nav-btn:hover {
+  background: var(--primary-hover);
   color: white;
   transform: translateY(-2px);
 }
-
 .home-btn,
 .liked-btn {
   background: var(--primary-color);
@@ -1054,10 +1389,17 @@ body {
   color: white;
 }
 
+
 /* ===== PROFILE SECTION ===== */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
 .profile-section {
   position: relative;
-  margin-left: var(--space-4);
+  margin-left: var(--space-6);
 }
 
 .profile-menu {
@@ -1088,6 +1430,7 @@ body {
   justify-content: center;
   color: white;
   font-size: var(--font-size-base);
+  overflow: hidden;
 }
 
 .profile-name {
@@ -1170,6 +1513,12 @@ body {
 
 .dropdown-item.logout {
   color: var(--danger-color);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--background-tertiary);
+  margin: var(--space-2) 0;
 }
 
 /* ===== MAIN CONTENT LAYOUT ===== */
