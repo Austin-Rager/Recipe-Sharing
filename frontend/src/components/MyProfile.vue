@@ -1,10 +1,37 @@
 <template>
   <div class="profile-page">
+    <!-- Styled Confirmation Dialog -->
+    <div v-if="showConfirmDialog" class="confirm-overlay" @click.self="cancelConfirm">
+      <div class="confirm-modal">
+        <div class="confirm-icon">{{ confirmDialog.icon }}</div>
+        <h3 class="confirm-title">{{ confirmDialog.title }}</h3>
+        <p class="confirm-message">{{ confirmDialog.message }}</p>
+        <div class="confirm-actions">
+          <button @click="cancelConfirm" class="btn-secondary">
+            {{ confirmDialog.cancelText }}
+          </button>
+          <button @click="confirmAction" class="btn-danger">
+            {{ confirmDialog.confirmText }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Styled Notification -->
+    <div v-if="notification.show" class="notification-overlay">
+      <div :class="['notification', `notification-${notification.type}`]">
+        <div class="notification-icon">{{ notification.icon }}</div>
+        <div class="notification-content">
+          <div v-if="notification.title" class="notification-title">{{ notification.title }}</div>
+          <div class="notification-message">{{ notification.message }}</div>
+        </div>
+        <button class="notification-close" @click="hideNotification">✕</button>
+      </div>
+    </div>
 
     <div class="profile-container">
       <div class="profile-main">
         
-    
         <div class="profile-header">
           <div class="profile-info-section">
             <div class="profile-avatar-container">
@@ -103,7 +130,6 @@
           </div>
         </div>
 
-  
         <div class="profile-tabs">
           <div class="tabs-header">
             <button 
@@ -139,7 +165,7 @@
                     </button>
                     <button 
                       class="action-btn delete-btn" 
-                      @click.stop="deleteRecipe(recipe)"
+                      @click.stop="showDeleteConfirm(recipe)"
                       :disabled="deleteLoading === getRecipeId(recipe)"
                     >
                       {{ deleteLoading === getRecipeId(recipe) ? '⏳' : '🗑️' }}
@@ -185,7 +211,7 @@
                   <img :src="getRecipeImage(recipe)" :alt="getRecipeTitle(recipe)" />
                   <button
                     class="like-btn liked"
-                    @click.stop="toggleLike(recipe)"
+                    @click.stop="showUnlikeConfirm(recipe)"
                     :disabled="unlikeLoading === getRecipeId(recipe)"
                   >
                     {{ unlikeLoading === getRecipeId(recipe) ? '⏳' : '❤️' }}
@@ -229,6 +255,52 @@ import { ref, computed, onMounted } from 'vue'
 const API_BASE_URL = 'http://localhost:8080';
 
 const emit = defineEmits(['go-home', 'go-to-liked', 'go-to-create', 'go-to-edit'])
+
+const currentUser = ref({
+  name: '',
+  email: '',
+  username: '',
+  bio: '',
+  joinedDate: 'Recently'
+})
+
+const editMode = ref(false)
+const activeTab = ref('recipes')
+const isSaving = ref(false)
+const deleteLoading = ref(null)
+const unlikeLoading = ref(null)
+
+const editForm = ref({
+  name: '',
+  email: '',
+  bio: ''
+})
+
+const userStats = ref({
+  recipesCreated: 0,
+  recipesLiked: 0
+})
+
+const myRecipes = ref([])
+const likedRecipes = ref([])
+
+const showConfirmDialog = ref(false)
+const confirmDialog = ref({
+  title: '',
+  message: '',
+  icon: '',
+  confirmText: 'Confirm',
+  cancelText: 'Cancel',
+  onConfirm: null
+})
+
+const notification = ref({
+  show: false,
+  type: 'info',
+  title: '',
+  message: '',
+  icon: ''
+})
 
 const api = {
   async request(endpoint, options = {}) {
@@ -346,37 +418,57 @@ function getRecipeDifficulty(recipe) {
   return 'Easy';
 }
 
-const currentUser = ref({
-  name: '',
-  email: '',
-  username: '',
-  bio: '',
-  joinedDate: 'Recently'
-})
-
-const editMode = ref(false)
-const activeTab = ref('recipes')
-const isSaving = ref(false)
-const deleteLoading = ref(null)
-const unlikeLoading = ref(null)
-
-const editForm = ref({
-  name: '',
-  email: '',
-  bio: ''
-})
-
-const userStats = ref({
-  recipesCreated: 0,
-  recipesLiked: 0
-})
-
-const myRecipes = ref([])
-const likedRecipes = ref([])
-
 const joinedDate = computed(() => {
   return currentUser.value.joinedDate || 'Recently'
 })
+
+function showStyledConfirm(options) {
+  confirmDialog.value = {
+    title: options.title || 'Confirm Action',
+    message: options.message || 'Are you sure?',
+    icon: options.icon || '❓',
+    confirmText: options.confirmText || 'Confirm',
+    cancelText: options.cancelText || 'Cancel',
+    onConfirm: options.onConfirm || (() => {})
+  }
+  showConfirmDialog.value = true
+}
+
+function confirmAction() {
+  if (confirmDialog.value.onConfirm) {
+    confirmDialog.value.onConfirm()
+  }
+  showConfirmDialog.value = false
+}
+
+function cancelConfirm() {
+  showConfirmDialog.value = false
+}
+
+function showNotification(type, message, title = '') {
+  const iconMap = {
+    success: '✅',
+    error: '⚠️',
+    warning: '⚠️',
+    info: 'ℹ️'
+  }
+  
+  notification.value = {
+    show: true,
+    type,
+    title,
+    message,
+    icon: iconMap[type] || '🍳'
+  }
+  
+  setTimeout(() => {
+    hideNotification()
+  }, 5000)
+}
+
+function hideNotification() {
+  notification.value.show = false
+}
 
 async function loadUserData() {
   try {
@@ -388,6 +480,7 @@ async function loadUserData() {
     console.log('Loaded user info:', userInfo);
   } catch (error) {
     console.error('Failed to load user info:', error);
+    showNotification('error', 'Failed to load user information', 'Load Error');
   }
 }
 
@@ -400,6 +493,7 @@ async function loadMyRecipes() {
   } catch (error) {
     console.error('Failed to load my recipes:', error);
     myRecipes.value = [];
+    showNotification('error', 'Failed to load your recipes', 'Load Error');
   }
 }
 
@@ -415,6 +509,7 @@ async function loadLikedRecipes() {
   } catch (error) {
     console.error('Failed to load liked recipes:', error);
     likedRecipes.value = [];
+    showNotification('error', 'Failed to load liked recipes', 'Load Error');
   }
 }
 
@@ -447,10 +542,10 @@ async function saveProfile() {
     
     editMode.value = false
     console.log('Profile saved')
-    alert('Profile updated successfully!');
+    showNotification('success', 'Your profile has been updated successfully!', 'Profile Updated ✨');
   } catch (error) {
     console.error('Failed to save profile:', error);
-    alert('Failed to save profile. Please try again.');
+    showNotification('error', 'Failed to save profile. Please try again.', 'Save Failed');
   } finally {
     isSaving.value = false;
   }
@@ -463,9 +558,7 @@ function cancelEdit() {
 
 function openRecipe(recipe) {
   console.log('Opening recipe:', getRecipeTitle(recipe))
-  alert(`Opening recipe: ${getRecipeTitle(recipe)}`)
 }
-
 
 function editRecipe(recipe) {
   const recipeId = getRecipeId(recipe)
@@ -473,29 +566,53 @@ function editRecipe(recipe) {
   emit('go-to-edit', recipeId)
 }
 
-async function deleteRecipe(recipe) {
+function showDeleteConfirm(recipe) {
+  const recipeTitle = getRecipeTitle(recipe);
+  
+  showStyledConfirm({
+    title: 'Delete Recipe?',
+    message: `Are you sure you want to delete "${recipeTitle}"? This action cannot be undone.`,
+    icon: '🗑️',
+    confirmText: 'Yes, Delete',
+    cancelText: 'Keep Recipe',
+    onConfirm: () => performDeleteRecipe(recipe)
+  });
+}
+
+async function performDeleteRecipe(recipe) {
   const recipeId = getRecipeId(recipe);
   const recipeTitle = getRecipeTitle(recipe);
   
-  if (confirm(`Delete "${recipeTitle}"?`)) {
-    try {
-      deleteLoading.value = recipeId;
-      
-      myRecipes.value = myRecipes.value.filter(r => getRecipeId(r) !== recipeId);
-      userStats.value.recipesCreated = myRecipes.value.length;
-      
-      console.log('Recipe deleted:', recipeTitle);
-      alert('Recipe deleted successfully!');
-    } catch (error) {
-      console.error('Failed to delete recipe:', error);
-      alert('Failed to delete recipe. Please try again.');
-    } finally {
-      deleteLoading.value = null;
-    }
+  try {
+    deleteLoading.value = recipeId;
+    
+    myRecipes.value = myRecipes.value.filter(r => getRecipeId(r) !== recipeId);
+    userStats.value.recipesCreated = myRecipes.value.length;
+    
+    console.log('Recipe deleted:', recipeTitle);
+    showNotification('success', `"${recipeTitle}" has been deleted successfully`, 'Recipe Deleted 🗑️');
+  } catch (error) {
+    console.error('Failed to delete recipe:', error);
+    showNotification('error', 'Failed to delete recipe. Please try again.', 'Delete Failed');
+  } finally {
+    deleteLoading.value = null;
   }
 }
 
-async function toggleLike(recipe) {
+function showUnlikeConfirm(recipe) {
+  const recipeTitle = getRecipeTitle(recipe);
+  
+  showStyledConfirm({
+    title: 'Remove from Favorites?',
+    message: `Remove "${recipeTitle}" from your liked recipes?`,
+    icon: '💔',
+    confirmText: 'Yes, Remove',
+    cancelText: 'Keep Favorite',
+    onConfirm: () => performUnlike(recipe)
+  });
+}
+
+async function performUnlike(recipe) {
   const recipeId = getRecipeId(recipe);
   const recipeTitle = getRecipeTitle(recipe);
   
@@ -508,9 +625,10 @@ async function toggleLike(recipe) {
     userStats.value.recipesLiked = likedRecipes.value.length;
     
     console.log('Recipe unliked:', recipeTitle);
+    showNotification('info', `Removed "${recipeTitle}" from favorites`, 'Removed from Favorites');
   } catch (error) {
     console.error('Failed to unlike recipe:', error);
-    alert('Failed to unlike recipe. Please try again.');
+    showNotification('error', 'Failed to remove from favorites. Please try again.', 'Remove Failed');
   } finally {
     unlikeLoading.value = null;
   }
@@ -541,10 +659,6 @@ function formatDate(dateString) {
   }
 }
 
-
-
-
-
 onMounted(async () => {
   console.log('Profile page loaded')
   await loadUserData()
@@ -553,7 +667,7 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped>
+<style>
 /* ===== PROFILE PAGE STYLES ===== */
 .profile-page {
   padding: var(--space-8) var(--space-6);

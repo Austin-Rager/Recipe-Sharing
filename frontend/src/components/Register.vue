@@ -1,9 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, defineProps, defineEmits } from 'vue'
 
-// UPDATED: Change URL to your recipe backend
 const URL = "http://localhost:8080";
-
 
 const props = defineProps({
   showBackButton: {
@@ -26,6 +24,13 @@ const showLogin = ref(true);
 const isLoading = ref(false);
 const errorMessage = ref("");
 
+const notification = ref({
+  show: false,
+  type: 'info',
+  title: '',
+  message: '',
+  icon: ''
+})
 
 const loginContainsText = computed(() => 
   user.value.username.length > 0 && user.value.password.length > 0
@@ -38,17 +43,41 @@ const registerContainsText = computed(() =>
   user.value.password.length > 0
 );
 
+function showNotification(type, message, title = '') {
+  const iconMap = {
+    success: '✅',
+    error: '⚠️',
+    warning: '⚠️',
+    info: 'ℹ️'
+  }
+  
+  notification.value = {
+    show: true,
+    type,
+    title,
+    message,
+    icon: iconMap[type] || '🍳'
+  }
+  
+  setTimeout(() => {
+    hideNotification()
+  }, 5000)
+}
+
+function hideNotification() {
+  notification.value.show = false
+}
+
 async function registerUser() {
   if (!registerContainsText.value) return;
-  
+
   isLoading.value = true;
   errorMessage.value = "";
-  
+
   try {
-   
     const res = await fetch(`${URL}/register`, {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
+      headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({
         name: user.value.name,
@@ -57,27 +86,56 @@ async function registerUser() {
         password: user.value.password
       }),
     });
-    
+
     if (res.status === 201) {
       showLogin.value = true;
       errorMessage.value = "";
-      alert("Registration successful! Please log in.");
-      user.value = { 
-        name: "", 
-        username: user.value.username, 
-        email: "", 
-        password: "" 
+      showNotification('success', 'Registration successful! Please log in.', 'Welcome to FlavorCraft! 🎉');
+      user.value = {
+        name: "",
+        username: user.value.username,
+        email: "",
+        password: ""
       };
     } else {
-      const errorText = await res.text();
-      errorMessage.value = errorText || "Failed to register.";
+      // read the response body only once
+      let errorText = await res.text();
+      let errorLower = errorText.toLowerCase();
+
+      try {
+        const parsedError = JSON.parse(errorText);
+        errorText = parsedError.message || parsedError.error || errorText;
+        errorLower = errorText.toLowerCase();
+      } catch (e) {
+        // do nothing, keep raw text if not JSON
+      }
+
+      console.log('Registration error:', errorText);
+
+      if (errorLower.includes('e11000') && errorLower.includes('email')) {
+        showNotification('error', 'This email is already registered. Please use a different email.', 'Email Already Exists');
+      } else if (errorLower.includes('e11000') && errorLower.includes('username')) {
+        showNotification('error', 'This username is already taken. Please choose a different one.', 'Username Already Exists');
+      } else if (errorLower.includes('e11000') || errorLower.includes('duplicate key')) {
+        showNotification('error', 'Username or email already exists. Please try different credentials.', 'Already Registered');
+      } else if (errorLower.includes('username') && (errorLower.includes('exist') || errorLower.includes('taken'))) {
+        showNotification('error', 'This username is already taken. Please choose a different one.', 'Username Already Exists');
+      } else if (errorLower.includes('email') && (errorLower.includes('exist') || errorLower.includes('taken'))) {
+        showNotification('error', 'This email is already registered. Please use a different email.', 'Email Already Exists');
+      } else if (errorLower.includes('validation failed') || res.status === 400) {
+        showNotification('error', 'Username or email already exists. Please check both fields and try again.', 'Already Registered');
+      } else {
+        showNotification('error', 'Failed to register. Please try again.', 'Registration Failed');
+      }
     }
   } catch (error) {
-    errorMessage.value = "Network error. Please try again.";
+    console.error('Network error:', error);
+    showNotification('error', 'Network error. Please check your connection and try again.', 'Connection Error');
   } finally {
     isLoading.value = false;
   }
 }
+
 
 async function loginUser() {
   if (!loginContainsText.value) return;
@@ -101,16 +159,24 @@ async function loginUser() {
       currentUser.value = data;
       clearForm();
       
-      
       emit('login-success', data);
       
     } else {
       const errorData = await res.json();
-      errorMessage.value = errorData.error || "Failed to login.";
+      const errorMsg = errorData.error || "Failed to login.";
+      
+      if (errorMsg.toLowerCase().includes('invalid') || errorMsg.toLowerCase().includes('incorrect')) {
+        showNotification('error', 'Invalid username or password. Please try again.', 'Login Failed');
+      } else if (errorMsg.toLowerCase().includes('not found')) {
+        showNotification('error', 'Username not found. Please check your username or register.', 'User Not Found');
+      } else {
+        showNotification('error', errorMsg, 'Login Failed');
+      }
+      
       user.value.password = "";
     }
   } catch (error) {
-    errorMessage.value = "Network error. Please try again.";
+    showNotification('error', 'Network error. Please check your connection and try again.', 'Connection Error');
   } finally {
     isLoading.value = false;
   }
@@ -118,18 +184,18 @@ async function loginUser() {
 
 async function logoutUser() {
   try {
-   
     await fetch(`${URL}/logout`, {
       method: "GET",
       credentials: "include",
     });
     currentUser.value = null;
     clearForm();
-    alert("Logged out successfully!");
+    showNotification('info', 'Thanks for visiting FlavorCraft! Come back soon! 👋', 'Logged Out');
     
     emit('go-back');
   } catch (error) {
     console.error("Logout failed:", error);
+    showNotification('error', 'Logout failed. Please try again.', 'Error');
   }
 }
 
@@ -137,13 +203,12 @@ function clearForm() {
   user.value = {name: "", username: "", email: "", password: ""};
 }
 
-
 function goBack() {
   clearForm();
   errorMessage.value = "";
+  hideNotification();
   emit('go-back');
 }
-
 
 onMounted(async () => {
 
@@ -152,7 +217,18 @@ onMounted(async () => {
 
 <template>
   <div class="login-page">
-   
+    <!-- Styled Notification -->
+    <div v-if="notification.show" class="notification-overlay">
+      <div :class="['notification', `notification-${notification.type}`]">
+        <div class="notification-icon">{{ notification.icon }}</div>
+        <div class="notification-content">
+          <div v-if="notification.title" class="notification-title">{{ notification.title }}</div>
+          <div class="notification-message">{{ notification.message }}</div>
+        </div>
+        <button class="notification-close" @click="hideNotification">✕</button>
+      </div>
+    </div>
+
     <div v-if="showBackButton" class="back-button-container">
       <button @click="goBack" class="back-btn">
         ← Back to Home
@@ -178,7 +254,6 @@ onMounted(async () => {
           </button>
         </div>
 
-     
         <form v-if="showLogin" @submit.prevent="loginUser" class="auth-form">
           <h2 style="margin-bottom: 5px;">Login</h2>
           
@@ -217,7 +292,6 @@ onMounted(async () => {
           </button>
         </form>
 
-        
         <form v-else @submit.prevent="registerUser" class="auth-form">
           <h2 style="margin-bottom: 5px;">Register</h2>
           
@@ -234,7 +308,6 @@ onMounted(async () => {
             />
           </div>
 
-          
           <div class="form-group">
             <label for="register-username">Username:</label>
             <input
@@ -284,19 +357,15 @@ onMounted(async () => {
         </form>
       </div>
 
-
       <div v-else class="user-dashboard">
         <h2>Welcome, {{ currentUser.username }}!</h2>
         <button @click="logoutUser" class="logout-btn">Logout</button>
       </div>
 
-
-      <div v-if="errorMessage" class="error-message">
-        {{ errorMessage }}
-      </div>
     </div>
   </div>
 </template>
+
 
 <style scoped>
 /* UPDATED: Match website design system */

@@ -30,7 +30,11 @@ const AccountSchema = new mongoose.Schema({
             type: Date,
             default: Date.now
         }
-    }]
+    }],
+    signupDate: {
+        type: Date,
+        default: Date.now
+    }
 });
 
 const RecipeSchema = new mongoose.Schema({

@@ -134,6 +134,7 @@ app.post("/register", async (req,res) =>{
             username: data.username,
             email: data.email,
             password: hashedPassword, 
+            signupDate: new Date()
         });
 
         console.log("New user created:", newUser.username);
