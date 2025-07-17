@@ -9,13 +9,13 @@
         <p class="page-subtitle">Update your culinary creation</p>
       </div>
 
-      <!-- Loading state -->
+      
       <div v-if="isLoading" class="loading-container">
         <div class="loading-spinner">⟳</div>
         <p>Loading recipe...</p>
       </div>
 
-      <!-- Recipe form -->
+    
       <form v-else @submit.prevent="updateRecipe" class="recipe-form">
         <div class="form-section">
           <h2 class="section-title">Basic Information</h2>
@@ -89,7 +89,7 @@
           </div>
         </div>
 
-        <!-- Image section -->
+
         <div class="form-section">
           <h2 class="section-title">Recipe Image</h2>
           
@@ -121,7 +121,7 @@
           </div>
         </div>
 
-        <!-- Ingredients section -->
+   
         <div class="form-section">
           <h2 class="section-title">Ingredients</h2>
           
@@ -179,7 +179,7 @@
           </button>
         </div>
 
-        <!-- Instructions section -->
+ 
         <div class="form-section">
           <h2 class="section-title">Cooking Instructions</h2>
           
@@ -215,7 +215,7 @@
           </button>
         </div>
 
-        <!-- Categories section -->
+        
         <div class="form-section">
           <h2 class="section-title">Categories</h2>
           
@@ -251,7 +251,7 @@
           </div>
         </div>
 
-        <!-- Chef's notes section -->
+
         <div class="form-section">
           <h2 class="section-title">Chef's Notes (Optional)</h2>
           

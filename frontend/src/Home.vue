@@ -323,6 +323,8 @@ const showFilters = ref(false)
 const showLiked = ref(false) 
 const showProfile = ref(false)
 const showCreateRecipe = ref(false)
+const showEditRecipe = ref(false)
+const recipeToEdit = ref(null)
 const showLoginPage = ref(false)
 const showRecipeDetails = ref(false)
 const showMyRecipes = ref(false)
@@ -419,14 +421,79 @@ function convertBackendRecipe(backendRecipe) {
   };
 }
 
-const showEditRecipe = ref(false)
-const recipeToEdit = ref(null)
-
 function handleEditRecipe(recipeId) {
-  recipeToEdit.value = recipeId
+  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with ID:', recipeId)
+  
+  
+  const recipeToEditData = apiRecipes.value.find(recipe => 
+    (recipe.id || recipe._id) === recipeId
+  )
+  
+  if (!recipeToEditData) {
+    console.error('Recipe not found in local data:', recipeId)
+    alert('Recipe not found!')
+    return
+  }
+  
+  console.log('🚀 Found recipe data:', recipeToEditData)
+  
+  recipeToEdit.value = recipeToEditData  
   showEditRecipe.value = true
   showProfile.value = false
+  showLiked.value = false
+  showCreateRecipe.value = false
+  showLoginPage.value = false
+  showProfileMenu.value = false
+  
+  console.log('🚀 State after update:', { 
+    showEditRecipe: showEditRecipe.value, 
+    showProfile: showProfile.value,
+    recipeToEdit: !!recipeToEdit.value 
+  })
+  
   window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+  
+
+
+function handleRecipeUpdated(updatedRecipe) {
+  console.log('Recipe updated:', updatedRecipe)
+  
+
+  const recipeIndex = apiRecipes.value.findIndex(recipe => 
+    (recipe.id || recipe._id) === (updatedRecipe.id || updatedRecipe._id)
+  )
+  
+  if (recipeIndex !== -1) {
+
+    apiRecipes.value[recipeIndex] = convertBackendRecipe(updatedRecipe)
+  }
+  
+  showEditRecipe.value = false
+  showProfile.value = true
+
+  setTimeout(() => {
+    alert(`Recipe "${getRecipeTitle(updatedRecipe)}" updated successfully`)
+  }, 100)
+}
+
+function handleRecipeDeleted(recipeId) {
+  console.log('Recipe deleted:', recipeId)
+  
+
+  apiRecipes.value = apiRecipes.value.filter(recipe => 
+    (recipe.id || recipe._id) !== recipeId
+  )
+  
+
+  showEditRecipe.value = false
+  showProfile.value = true
+  
+
+  setTimeout(() => {
+    alert('Recipe deleted successfully')
+  }, 100)
 }
 
 function parseTime(timeString) {
@@ -493,7 +560,6 @@ function getRecipeImage(recipe) {
   if (recipe.images?.length > 0) return recipe.images[0].url;
   console.log("image loaded")
   return "../assets/fork-plate-knife.svg"; 
-
 }
 
 function getRecipeRating(recipe) {
@@ -699,6 +765,7 @@ function goToHome() {
  showLiked.value = false;
  showProfile.value = false;
  showCreateRecipe.value = false;
+ showEditRecipe.value = false;
  showLoginPage.value = false;
  showRecipeDetails.value = false;
  showMyRecipes.value = false;
@@ -715,6 +782,7 @@ function goToCreateRecipe() {
  showCreateRecipe.value = true;
  showLiked.value = false;
  showProfile.value = false;
+ showEditRecipe.value = false;
  showLoginPage.value = false;
  showRecipeDetails.value = false;
  showMyRecipes.value = false;
@@ -732,6 +800,7 @@ function goToLikedRecipes() {
  showLiked.value = true;
  showProfile.value = false;
  showCreateRecipe.value = false;
+ showEditRecipe.value = false;
  showLoginPage.value = false;
  showRecipeDetails.value = false;
  showMyRecipes.value = false;
@@ -761,6 +830,7 @@ function goToProfile() {
  showProfile.value = true;
  showLiked.value = false;
  showCreateRecipe.value = false;
+ showEditRecipe.value = false;
  showLoginPage.value = false;
  showRecipeDetails.value = false;
  showMyRecipes.value = false;
