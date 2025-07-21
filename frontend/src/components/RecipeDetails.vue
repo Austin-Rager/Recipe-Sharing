@@ -11,7 +11,9 @@
         <button class="notification-close" @click="hideNotification">✕</button>
       </div>
     </div>
-    <div class="recipe-details">
+    
+    <!-- Recipe Details (only show when not editing) -->
+    <div v-if="!showEditRecipe" class="recipe-details">
       <!-- Recipe Header Section -->
       <div class="recipe-header" v-if="recipe">
         <div class="recipe-image">
@@ -100,7 +102,7 @@
             <button class="btn btn-like" @click="likeRecipe">
               <span>{{ recipe.isLiked ? '❤️ Liked' : '🤍 Like' }}</span>
             </button>
-            <button class="btn btn-edit" @click="editRecipe">
+            <button v-if="isRecipeOwner" class="btn btn-edit" @click="editRecipe">
               <span>✏️ Edit</span> 
             </button>
           </div>
@@ -164,6 +166,15 @@
         </div>
       </div>
     </div>
+
+    <!-- EditRecipe Component -->
+    <EditRecipe 
+      v-if="showEditRecipe && props.recipeData && (props.recipeData._id || props.recipeData.id)"
+      :recipe-id="props.recipeData._id || props.recipeData.id"
+      @go-home="handleEditRecipeClose"
+      @recipe-updated="handleRecipeUpdated"
+      @recipe-deleted="handleRecipeDeleted"
+    />
     
     <!-- Full-Screen Image Gallery Modal -->
     <div v-if="showGalleryModal" class="gallery-modal-overlay" @click="closeGalleryModal">
@@ -232,6 +243,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import EditRecipe from './EditRecipe.vue'
 
 
 // API utilities
@@ -269,6 +281,7 @@ const api = {
 
 // User authentication state
 const isLoggedIn = ref(false);
+const currentUser = ref(null);
 
 // Notification system
 const notification = ref({
@@ -279,14 +292,16 @@ const notification = ref({
   icon: ''
 });
 
-// Check login status
+// Check login status and get user info
 const checkLoginStatus = async () => {
   try {
-    await api.request('/me');
+    const userInfo = await api.request('/me');
     isLoggedIn.value = true;
+    currentUser.value = userInfo;
   } catch (error) {
     console.log('Not logged in:', error.message);
     isLoggedIn.value = false;
+    currentUser.value = null;
   }
 };
 
@@ -324,13 +339,9 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['go-home'])
+const emit = defineEmits(['go-home', 'recipe-updated', 'recipe-deleted'])
 
 // Helper functions
-const getRecipeId = (recipe) => {
-  return recipe?.id || recipe?._id || 'unknown';
-};
-
 const getRecipeTitle = (recipe) => {
   return recipe?.title || recipe?.name || 'Unknown Recipe';
 };
@@ -342,6 +353,9 @@ const checkedIngredients = ref({})
 const currentImageIndex = ref(0)
 const showGalleryModal = ref(false)
 const modalImageIndex = ref(0)
+
+// Edit recipe state
+const showEditRecipe = ref(false)
 
 // Use the recipe data from props
 const recipe = computed(() => {
@@ -431,6 +445,14 @@ const progressPercentage = computed(() => {
   return Math.round((checkedCount.value / recipe.value.ingredients.length) * 100)
 })
 
+// Check if current user is the recipe creator
+const isRecipeOwner = computed(() => {
+  return isLoggedIn.value && 
+         currentUser.value && 
+         props.recipeData && 
+         props.recipeData.creator === currentUser.value.username
+})
+
 // LocalStorage helpers for ingredient checklist persistence
 const getStorageKey = (recipeId) => `recipe-ingredients-${recipeId}`
 
@@ -498,13 +520,34 @@ const likeRecipe = async () => {
   }
 }
 
-const editRecipe = () => {
-  console.log('Navigate to edit recipe page')
-  alert('Edit functionality - coming soon!')
+const editRecipe = async () => {
+  if (!isRecipeOwner.value) {
+    showNotification('warning', 'You can only edit your own recipes', 'Permission Denied');
+    return;
+  }
+
+  // Show the EditRecipe component
+  showEditRecipe.value = true;
+  showNotification('info', 'Opening recipe editor...', 'Edit Mode');
 }
 
-const saveRecipe = () => {
-  console.log('Recipe saved!')
+// Handle EditRecipe component events
+const handleEditRecipeClose = () => {
+  showEditRecipe.value = false;
+}
+
+const handleRecipeUpdated = (updatedRecipe) => {
+  showEditRecipe.value = false;
+  showNotification('success', 'Recipe updated successfully!', 'Recipe Saved');
+  // Optionally emit to parent or refresh recipe data
+  emit('recipe-updated', updatedRecipe);
+}
+
+const handleRecipeDeleted = (recipeId) => {
+  showEditRecipe.value = false;
+  showNotification('success', 'Recipe deleted successfully!', 'Recipe Deleted');
+  // Emit to parent to handle navigation back to home
+  emit('recipe-deleted', recipeId);
 }
 
 // Clear ingredient progress for current recipe
@@ -579,10 +622,6 @@ const previousModalImage = () => {
   }
 };
 
-// Navigation method
-function goToHome() {
-  emit('go-home')
-}
 
 // Initialize checklist state with localStorage persistence
 const initializeIngredients = (recipeData) => {
