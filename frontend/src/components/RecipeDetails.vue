@@ -17,7 +17,6 @@
         <div class="recipe-image">
           <!-- Image Gallery -->
           <div class="image-gallery" v-if="recipe.images && recipe.images.length > 0">
-<<<<<<< Updated upstream
             <!-- Main Image Display -->
             <div class="main-image-container">
               <img 
