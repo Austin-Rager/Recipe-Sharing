@@ -261,7 +261,7 @@ const currentUser = ref({
   email: '',
   username: '',
   bio: '',
-  joinedDate: 'Recently'
+  signupDate: ''
 })
 
 const editMode = ref(false)
@@ -419,7 +419,17 @@ function getRecipeDifficulty(recipe) {
 }
 
 const joinedDate = computed(() => {
-  return currentUser.value.joinedDate || 'Recently'
+  if (!currentUser.value.signupDate) return 'Recently';
+  
+  try {
+    const date = new Date(currentUser.value.signupDate);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long' 
+    }); // e.g., "January 2024"
+  } catch (error) {
+    return 'Recently';
+  }
 })
 
 function showStyledConfirm(options) {
@@ -475,7 +485,6 @@ async function loadUserData() {
     const userInfo = await api.getUserInfo();
     currentUser.value = {
       ...userInfo,
-      joinedDate: 'January 2024'
     };
     console.log('Loaded user info:', userInfo);
   } catch (error) {
@@ -563,7 +572,7 @@ function openRecipe(recipe) {
 function editRecipe(recipe) {
   const recipeId = getRecipeId(recipe)
   console.log('Editing recipe:', getRecipeTitle(recipe), 'ID:', recipeId)
-  emit('go-to-edit', recipeId)
+  emit('go-to-edit', recipe) // This is correct - don't change this
 }
 
 function showDeleteConfirm(recipe) {

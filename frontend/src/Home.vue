@@ -163,12 +163,12 @@
          @open-recipe="openRecipe"
        />
        
-       <ProfilePage 
-         v-else-if="showProfile && isLoggedIn" 
-         @go-home="goToHome" 
-         @go-to-create="goToCreateRecipe"
-         @edit-recipe="handleEditRecipe"
-       />
+        <ProfilePage 
+          v-else-if="showProfile && isLoggedIn" 
+          @go-home="goToHome" 
+          @go-to-create="goToCreateRecipe"
+          @go-to-edit="handleEditRecipe"  
+        />
 
        <MyRecipesPage 
          v-else-if="showMyRecipes && isLoggedIn" 
@@ -557,22 +557,20 @@ function closeError() {
   apiError.value = '';
 }
 
-function handleEditRecipe(recipeId) {
-  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with ID:', recipeId)
+function handleEditRecipe(recipe) {
+  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with recipe:', recipe)
   
-  const recipeToEditData = apiRecipes.value.find(recipe => 
-    (recipe.id || recipe._id) === recipeId
-  )
+  const recipeId = recipe.id || recipe._id
   
-  if (!recipeToEditData) {
-    console.error('Recipe not found in local data:', recipeId)
-    showNotification('error', 'Recipe not found. It may have been deleted.', 'Recipe Not Found');
+  if (!recipeId) {
+    console.error('No recipe ID found:', recipe)
+    showNotification('error', 'Recipe ID not found. Cannot edit recipe.', 'Recipe Error');
     return
   }
   
-  console.log('🚀 Found recipe data:', recipeToEditData)
+  console.log('🚀 Using recipe ID:', recipeId)
   
-  recipeToEdit.value = recipeToEditData  
+  recipeToEdit.value = recipeId
   showEditRecipe.value = true
   showProfile.value = false
   showLiked.value = false
@@ -583,7 +581,7 @@ function handleEditRecipe(recipeId) {
   console.log('🚀 State after update:', { 
     showEditRecipe: showEditRecipe.value, 
     showProfile: showProfile.value,
-    recipeToEdit: !!recipeToEdit.value 
+    recipeToEdit: recipeToEdit.value 
   })
   
   window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -1059,8 +1057,7 @@ onMounted(() => {
  console.log('Home page loaded');
  document.addEventListener('click', handleClickOutside);
  checkAuthStatus();
- 
- // Initialize Lucide icons with longer delay
+
  setTimeout(() => {
    if (window.lucide) {
      window.lucide.createIcons();
@@ -1068,7 +1065,7 @@ onMounted(() => {
    }
  }, 200);
  
- // Reinitialize periodically for dynamic content
+
  setInterval(() => {
    if (window.lucide) {
      window.lucide.createIcons();
@@ -1123,11 +1120,6 @@ defineExpose({
   width: 16px;
   height: 16px;
   color: var(--text-muted);
-  transition: transform var(--transition-fast);
-}
-
-.profile-menu:hover .dropdown-arrow {
-  transform: rotate(180deg);
 }
 
 /* ===== NOTIFICATION & DIALOG ICONS ===== */
@@ -1190,7 +1182,6 @@ defineExpose({
   width: 20px;
   height: 20px;
   color: #ef4444;
-  transition: all 0.3s ease;
   stroke-width: 2;
 }
 
@@ -1202,111 +1193,6 @@ defineExpose({
 .heart-icon.heart-filled {
   fill: #ef4444;
   stroke: #ef4444;
-}
-
-.like-btn:hover .heart-icon {
-  transform: scale(1.1);
-}
-
-/* ===== NO RESULTS ICON ===== */
-.no-results-icon {
-  width: 64px;
-  height: 64px;
-  color: var(--text-muted);
-  opacity: 0.6;
-  margin-bottom: var(--space-6);
-  stroke-width: 1.5;
-}
-
-/* ===== NOTIFICATION & DIALOG ICONS ===== */
-.notification-icon-lucide {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  margin-top: 2px;
-  animation: iconPulse 0.6s ease-out;
-}
-
-.confirm-icon-lucide {
-  width: 48px;
-  height: 48px;
-  margin-bottom: var(--space-6);
-  animation: bounce 0.6s ease-out;
-  color: var(--primary-color);
-}
-
-
-
-/* ===== LOADING & ERROR ICONS ===== */
-.loading-spinner {
-  width: 48px;
-  height: 48px;
-  color: var(--primary-color);
-  animation: spin 1s linear infinite;
-  margin-bottom: var(--space-4);
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.error-icon {
-  width: 48px;
-  height: 48px;
-  color: var(--danger-color);
-  margin-bottom: var(--space-6);
-  animation: shake 0.6s ease-out;
-}
-
-/* ===== BUTTON ICONS ===== */
-.btn-icon {
-  width: 18px;
-  height: 18px;
-  margin-right: 8px;
-  stroke-width: 2;
-}
-
-/* ===== SECTION HEADER ICONS ===== */
-.section-icon {
-  width: 28px;
-  height: 28px;
-  color: var(--primary-color);
-  margin-right: 12px;
-  stroke-width: 2.5;
-}
-
-.time-icon {
-  width: 16px;
-  height: 16px;
-  color: var(--text-secondary);
-  margin-right: 4px;
-  stroke-width: 2;
-}
-
-/* ===== HEART ICON (LIKE BUTTON) ===== */
-.heart-icon {
-  width: 20px;
-  height: 20px;
-  color: #ef4444;
-  transition: all 0.3s ease;
-  stroke-width: 2;
-}
-
-.heart-icon.heart-empty {
-  fill: none;
-  stroke: #ef4444;
-}
-
-.heart-icon.heart-filled {
-  fill: #ef4444;
-  stroke: #ef4444;
-  animation: heartBeat 0.6s ease-out;
-}
-
-
-.like-btn:hover .heart-icon {
-  transform: scale(1.1);
 }
 
 /* ===== NO RESULTS ICON ===== */
@@ -1332,7 +1218,6 @@ defineExpose({
   align-items: center;
   justify-content: center;
   z-index: 10001;
-  animation: fadeIn 0.3s ease-out;
 }
 
 .confirm-modal {
@@ -1344,7 +1229,6 @@ defineExpose({
   max-width: 450px;
   width: 90%;
   text-align: center;
-  animation: modalSlideIn 0.3s ease-out;
 }
 
 .confirm-title {
@@ -1377,7 +1261,6 @@ defineExpose({
   font-weight: 600;
   font-size: var(--font-size-sm);
   cursor: pointer;
-  transition: all var(--transition-fast);
   box-shadow: var(--shadow-md);
   display: flex;
   align-items: center;
@@ -1386,8 +1269,6 @@ defineExpose({
 
 .btn-danger:hover {
   background: linear-gradient(135deg, var(--danger-hover), var(--danger-color));
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
 }
 
 /* ===== STYLED NOTIFICATIONS ===== */
@@ -1413,9 +1294,7 @@ defineExpose({
   min-width: 320px;
   max-width: 400px;
   pointer-events: auto;
-
 }
-
 
 .notification::before {
   content: '';
@@ -1487,7 +1366,6 @@ defineExpose({
   cursor: pointer;
   padding: 4px;
   border-radius: var(--radius-sm);
-  transition: all var(--transition-fast);
   flex-shrink: 0;
   margin-top: -2px;
 }
@@ -1495,7 +1373,6 @@ defineExpose({
 .notification-close:hover {
   background: var(--background-tertiary);
   color: var(--text-primary);
-  transform: scale(1.1);
 }
 
 /* ===== ENHANCED LOADING OVERLAY ===== */
@@ -1520,9 +1397,7 @@ defineExpose({
   border-radius: var(--radius-2xl);
   box-shadow: var(--shadow-xl);
   border: 1px solid var(--background-tertiary);
-  animation: fadeInScale 0.3s ease-out;
 }
-
 
 .loading-text {
   font-size: var(--font-size-lg);
@@ -1543,7 +1418,6 @@ defineExpose({
   align-items: center;
   justify-content: center;
   z-index: 10000;
-  animation: fadeIn 0.3s ease-out;
 }
 
 .error-modal {
@@ -1555,7 +1429,6 @@ defineExpose({
   max-width: 500px;
   width: 90%;
   text-align: center;
-  animation: modalSlideIn 0.3s ease-out;
 }
 
 .error-title {
@@ -1589,7 +1462,6 @@ defineExpose({
   font-weight: 600;
   font-size: var(--font-size-sm);
   cursor: pointer;
-  transition: all var(--transition-fast);
   box-shadow: var(--shadow-md);
   display: flex;
   align-items: center;
@@ -1598,8 +1470,6 @@ defineExpose({
 
 .btn-primary:hover {
   background: linear-gradient(135deg, var(--primary-hover), var(--primary-color));
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
 }
 
 .btn-secondary {
@@ -1611,7 +1481,6 @@ defineExpose({
   font-weight: 600;
   font-size: var(--font-size-sm);
   cursor: pointer;
-  transition: all var(--transition-fast);
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -1620,10 +1489,9 @@ defineExpose({
 .btn-secondary:hover {
   background: var(--background-tertiary);
   border-color: var(--primary-color);
-  transform: translateY(-2px);
 }
 
-/* ===== EXISTING STYLES (unchanged) ===== */
+/* ===== EXISTING STYLES ===== */
 .profile-avatar img,
 .profile-avatar-large img {
   width: 100%;
@@ -1636,19 +1504,6 @@ defineExpose({
 .profile-avatar:has(img),
 .profile-avatar-large:has(img) {
   background: transparent !important;
-}
-.profile-avatar-img {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.profile-avatar-img-large {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  object-fit: cover;
 }
 
 .profile-avatar-img {
@@ -1730,7 +1585,6 @@ body {
   background: var(--background-primary);
   outline: none;
   box-shadow: var(--shadow-sm);
-  transition: border-color var(--transition-fast);
 }
 
 .search-bar input:focus {
@@ -1750,83 +1604,81 @@ body {
   color: var(--text-muted);
   font-size: var(--font-size-lg);
 }
+
 .search-results-header {
- display: flex;
- justify-content: space-between;
- align-items: center;
- margin-bottom: var(--space-6);
- padding: var(--space-6);
- background: var(--background-primary);
- border-radius: var(--radius-xl);
- box-shadow: var(--shadow-md);
- border: 1px solid var(--background-tertiary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-6);
+  padding: var(--space-6);
+  background: var(--background-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--background-tertiary);
 }
 
 .search-results-header h2 {
- font-size: var(--font-size-2xl);
- font-weight: 700;
- color: var(--text-primary);
- margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
 }
 
 .clear-search-btn {
- padding: var(--space-3) var(--space-6);
- background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
- border: none;
- border-radius: var(--radius-full);
- color: white;
- font-weight: 600;
- font-size: var(--font-size-sm);
- cursor: pointer;
- transition: all var(--transition-fast);
- box-shadow: var(--shadow-md);
- display: flex;
- align-items: center;
- gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  border: none;
+  border-radius: var(--radius-full);
+  color: white;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .clear-search-btn:hover {
- background: linear-gradient(135deg, var(--primary-hover), var(--primary-color));
- transform: translateY(-2px);
- box-shadow: var(--shadow-lg);
+  background: linear-gradient(135deg, var(--primary-hover), var(--primary-color));
 }
 
 .recipes-section-header {
- margin-bottom: var(--space-6);
+  margin-bottom: var(--space-6);
 }
 
 .recipes-section-header h2 {
- font-size: var(--font-size-3xl);
- font-weight: 700;
- color: var(--text-primary);
- margin: 0;
- display: flex;
- align-items: center;
- gap: var(--space-3);
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .no-search-results {
- text-align: center;
- padding: var(--space-16) var(--space-8);
- background: var(--background-primary);
- border-radius: var(--radius-2xl);
- box-shadow: var(--shadow-lg);
- border: 1px solid var(--background-tertiary);
- margin-top: var(--space-8);
+  text-align: center;
+  padding: var(--space-16) var(--space-8);
+  background: var(--background-primary);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--background-tertiary);
+  margin-top: var(--space-8);
 }
 
 .no-search-results h3 {
- font-size: var(--font-size-2xl);
- font-weight: 600;
- color: var(--text-primary);
- margin-bottom: var(--space-4);
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
 }
 
 .no-search-results p {
- font-size: var(--font-size-lg);
- color: var(--text-secondary);
- margin-bottom: var(--space-8);
- line-height: 1.6;
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-8);
+  line-height: 1.6;
 }
 
 .auth-buttons {
@@ -1846,14 +1698,12 @@ body {
   font-size: var(--font-size-sm);
   cursor: pointer;
   box-shadow: var(--shadow-sm);
-  transition: all var(--transition-fast);
   white-space: nowrap;
 }
 
 .auth-buttons .nav-btn:hover {
   background: var(--primary-hover);
   color: white;
-  transform: translateY(-2px);
 }
 
 .nav-buttons {
@@ -1872,7 +1722,6 @@ body {
   font-size: var(--font-size-sm);
   cursor: pointer;
   box-shadow: var(--shadow-sm);
-  transition: all var(--transition-fast);
 }
 
 .nav-buttons .home-btn,
@@ -1889,8 +1738,8 @@ body {
 .nav-btn:hover {
   background: var(--primary-hover);
   color: white;
-  transform: translateY(-2px);
 }
+
 .home-btn,
 .liked-btn {
   background: var(--primary-color);
@@ -1923,7 +1772,6 @@ body {
   background: var(--background-primary);
   border: 2px solid var(--background-tertiary);
   box-shadow: var(--shadow-sm);
-  transition: all var(--transition-fast);
 }
 
 .profile-menu:hover {
@@ -2004,7 +1852,6 @@ body {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  transition: background-color var(--transition-fast);
 }
 
 .dropdown-item:hover {
@@ -2056,7 +1903,6 @@ body {
   grid-template-columns: 280px 1fr;
   min-height: 200px;
   border: 1px solid var(--background-tertiary);
-  transition: transform var(--transition-normal);
 }
 
 .featured-card:hover {
@@ -2128,7 +1974,6 @@ body {
   cursor: pointer;
   box-shadow: var(--shadow-md);
   border: 1px solid var(--background-tertiary);
-  transition: transform var(--transition-normal);
 }
 
 .trending-card:hover {
@@ -2165,7 +2010,6 @@ body {
   cursor: pointer;
   box-shadow: var(--shadow-md);
   border: 1px solid var(--background-tertiary);
-  transition: transform var(--transition-normal);
 }
 
 .recipe-card:hover {
@@ -2199,7 +2043,6 @@ body {
   align-items: center;
   justify-content: center;
   box-shadow: var(--shadow-md);
-  transition: transform var(--transition-fast);
 }
 
 .like-btn:hover {
@@ -2293,7 +2136,6 @@ body {
   cursor: pointer !important;
   padding: 8px 12px !important;
   border-radius: 6px !important;
-  transition: background-color 150ms ease-in-out !important;
   margin-bottom: 0 !important;
 }
 
@@ -2317,7 +2159,6 @@ body {
   font-size: var(--font-size-sm);
   background: var(--background-primary);
   cursor: pointer;
-  transition: border-color var(--transition-fast);
 }
 
 .filter-group select:focus {
@@ -2335,7 +2176,6 @@ body {
   font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--text-secondary);
-  transition: all var(--transition-fast);
 }
 
 .clear-filters:hover {
@@ -2493,9 +2333,4 @@ body {
   outline-offset: 2px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  * {
-    transition-duration: 0.01ms !important;
-  }
-}
 </style>
