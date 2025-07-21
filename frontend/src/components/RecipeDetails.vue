@@ -1,11 +1,23 @@
 <template>
   <div class="recipe-details-page">
+    <!-- Notification System -->
+    <div v-if="notification.show" class="notification-overlay">
+      <div :class="['notification', `notification-${notification.type}`]">
+        <div class="notification-icon">{{ notification.icon }}</div>
+        <div class="notification-content">
+          <div v-if="notification.title" class="notification-title">{{ notification.title }}</div>
+          <div class="notification-message">{{ notification.message }}</div>
+        </div>
+        <button class="notification-close" @click="hideNotification">✕</button>
+      </div>
+    </div>
     <div class="recipe-details">
       <!-- Recipe Header Section -->
       <div class="recipe-header" v-if="recipe">
         <div class="recipe-image">
           <!-- Image Gallery -->
           <div class="image-gallery" v-if="recipe.images && recipe.images.length > 0">
+<<<<<<< Updated upstream
             <!-- Main Image Display -->
             <div class="main-image-container">
               <img 
@@ -85,9 +97,7 @@
 
           <!-- Action Buttons -->
           <div class="action-buttons">
-            <button class="btn btn-home" @click="goToHome">
-              <span>← Back to Home</span>
-            </button>
+
             <button class="btn btn-like" @click="likeRecipe">
               <span>{{ recipe.isLiked ? '❤️ Liked' : '🤍 Like' }}</span>
             </button>
@@ -224,6 +234,90 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 
+
+// API utilities
+const API_BASE_URL = 'http://localhost:8080';
+
+const api = {
+  async request(endpoint, options = {}) {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const config = {
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
+    };
+
+    const response = await fetch(url, config);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  },
+
+  async likeRecipe(id) {
+    return this.request(`/recipe/${id}/like`, { method: 'POST' });
+  },
+
+  async unlikeRecipe(id) {
+    return this.request(`/recipe/${id}/like`, { method: 'DELETE' });
+  }
+};
+
+// User authentication state
+const isLoggedIn = ref(false);
+
+// Notification system
+const notification = ref({
+  show: false,
+  type: 'info',
+  title: '',
+  message: '',
+  icon: ''
+});
+
+// Check login status
+const checkLoginStatus = async () => {
+  try {
+    await api.request('/me');
+    isLoggedIn.value = true;
+  } catch (error) {
+    console.log('Not logged in:', error.message);
+    isLoggedIn.value = false;
+  }
+};
+
+// Notification system
+function showNotification(type, message, title = '') {
+  const iconMap = {
+    success: '✅',
+    error: '⚠️',
+    warning: '⚠️',
+    info: 'ℹ️'
+  };
+  
+  notification.value = {
+    show: true,
+    type,
+    title,
+    message,
+    icon: iconMap[type] || '🍳'
+  };
+  
+  // Auto-hide after 4 seconds
+  setTimeout(() => {
+    hideNotification();
+  }, 4000);
+}
+
+function hideNotification() {
+  notification.value.show = false;
+}
+
 const props = defineProps({
   recipeData: {
     type: Object,
@@ -232,6 +326,15 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['go-home'])
+
+// Helper functions
+const getRecipeId = (recipe) => {
+  return recipe?.id || recipe?._id || 'unknown';
+};
+
+const getRecipeTitle = (recipe) => {
+  return recipe?.title || recipe?.name || 'Unknown Recipe';
+};
 
 // Ingredients checklist state
 const checkedIngredients = ref({})
@@ -244,6 +347,13 @@ const modalImageIndex = ref(0)
 // Use the recipe data from props
 const recipe = computed(() => {
   if (!props.recipeData) return null;
+  
+  
+  if (props.recipeData.images) {
+    console.log('📏 Images length:', props.recipeData.images.length);
+    console.log('🖼️ First image:', props.recipeData.images[0]);
+    console.log('🖼️ All images:', props.recipeData.images);
+  }
   
   // Transform instructions - handle both string arrays and object arrays
   const transformInstructions = (instructions) => {
@@ -284,10 +394,23 @@ const recipe = computed(() => {
     });
   };
   
+  // Handle images - check multiple possible formats
+  let processedImages = [];
+  if (props.recipeData.images && Array.isArray(props.recipeData.images) && props.recipeData.images.length > 0) {
+    processedImages = props.recipeData.images;
+  } else if (props.recipeData.image) {
+    // If there's a single image property, convert it to array format
+    processedImages = [{ url: props.recipeData.image }];
+  }
+  
+  console.log('✅ Processed images:', processedImages);
+  console.log('🎯 Final images array length:', processedImages.length);
+  
   return {
     title: props.recipeData.title || props.recipeData.name || 'Recipe',
     description: props.recipeData.description || 'Delicious recipe',
     image: props.recipeData.image || 
+
            (props.recipeData.images?.length > 0 ? props.recipeData.images[0].url : 'https://via.placeholder.com/400x300'),
     images: props.recipeData.images || [],
     rating: props.recipeData.rating || 4.0,
@@ -330,11 +453,49 @@ const loadIngredientState = (recipeId) => {
   }
 }
 
+
+
 // Methods
-const likeRecipe = () => {
-  if (recipe.value) {
-    recipe.value.isLiked = !recipe.value.isLiked
-    console.log(recipe.value.isLiked ? 'Recipe liked!' : 'Recipe unliked!')
+const likeRecipe = async () => {
+  if (!isLoggedIn.value) {
+    showNotification('warning', 'Please log in to like recipes', 'Login Required');
+    return;
+  }
+
+  if (!recipe.value || !props.recipeData) return;
+
+  // Get the recipe ID from the original props data, which should have the MongoDB _id
+  const recipeId = props.recipeData._id || props.recipeData.id;
+  
+  // Validate that we have a proper MongoDB ObjectId (24 character hex string)
+  if (!recipeId || typeof recipeId !== 'string' || recipeId.length !== 24) {
+    console.error('Invalid recipe ID:', recipeId);
+    showNotification('error', 'Invalid recipe ID. Cannot like this recipe.', 'Error');
+    return;
+  }
+
+  const wasLiked = recipe.value.isLiked;
+
+  try {
+    if (wasLiked) {
+      await api.unlikeRecipe(recipeId);
+      showNotification('info', `Removed "${getRecipeTitle(recipe.value)}" from favorites`, 'Recipe Unliked');
+    } else {
+      await api.likeRecipe(recipeId);
+      showNotification('success', `Added "${getRecipeTitle(recipe.value)}" to favorites!`, 'Recipe Liked ❤️');
+    }
+    
+    // Update local state
+    recipe.value.isLiked = !wasLiked;
+    
+    // Update likes count if available
+    if (props.recipeData.likes !== undefined) {
+      props.recipeData.likes += wasLiked ? -1 : 1;
+    }
+    
+  } catch (error) {
+    console.error('Failed to toggle like:', error);
+    showNotification('error', 'Failed to update like status. Please try again.', 'Connection Error');
   }
 }
 
@@ -482,6 +643,8 @@ onMounted(() => {
   if (props.recipeData) {
     initializeIngredients(props.recipeData)
   }
+  // Check user login status
+  checkLoginStatus();
   // Add keyboard event listener
   document.addEventListener('keydown', handleKeydown);
 });
@@ -858,6 +1021,106 @@ onUnmounted(() => {
   object-fit: cover;
   border-radius: var(--radius-xl);
   background: linear-gradient(45deg, #f0f4f8, #d6e1ea);
+  transition: opacity 0.3s ease;
+}
+
+.image-nav-arrows {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  padding: 0 var(--space-4);
+  pointer-events: none;
+}
+
+.nav-arrow {
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  pointer-events: auto;
+  backdrop-filter: blur(4px);
+}
+
+.nav-arrow:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.1);
+}
+
+.nav-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.image-counter {
+  position: absolute;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+}
+
+.image-thumbnails {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding: var(--space-2) 0;
+}
+
+.thumbnail-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  opacity: 0.6;
+  transform: scale(0.9);
+}
+
+.thumbnail-btn:hover {
+  opacity: 0.8;
+  transform: scale(0.95);
+}
+
+.thumbnail-btn.active {
+  opacity: 1;
+  transform: scale(1);
+  box-shadow: 0 0 0 3px var(--primary-color);
+}
+
+.thumbnail-img {
+  width: 60px;
+  height: 45px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  display: block;
+}
+
+.no-image img {
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(45deg, #f0f4f8, #d6e1ea);
 }
 
 .clickable {
@@ -1082,6 +1345,15 @@ onUnmounted(() => {
   display: block;
 }
 
+.clickable {
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.clickable:hover {
+  opacity: 0.9;
+}
+
 .recipe-info {
   flex: 1;
 }
@@ -1179,12 +1451,12 @@ onUnmounted(() => {
 }
 
 .btn-edit {
-  background: var(--warning-color, #f59e0b);
+  background-color: #807f7f;
   color: white;
 }
 
 .btn-edit:hover {
-  background: #d97706;
+  background: #505050;
 }
 
 .btn-save {
@@ -1391,6 +1663,356 @@ onUnmounted(() => {
   transition: width var(--transition-normal);
 }
 
+/* ===== STYLED NOTIFICATIONS ===== */
+.notification-overlay {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.notification {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  background: var(--background-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--background-tertiary);
+  position: relative;
+  overflow: hidden;
+  min-width: 320px;
+  max-width: 400px;
+  pointer-events: auto;
+  animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.notification::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--primary-color);
+}
+
+.notification-success {
+  background: linear-gradient(135deg, var(--background-primary) 0%, var(--success-light, #f0fdf4) 100%);
+}
+
+.notification-success::before {
+  background: var(--success-color);
+}
+
+.notification-error {
+  background: linear-gradient(135deg, var(--background-primary) 0%, #fee2e2 100%);
+}
+
+.notification-error::before {
+  background: var(--danger-color);
+}
+
+.notification-warning {
+  background: linear-gradient(135deg, var(--background-primary) 0%, #fef3c7 100%);
+}
+
+.notification-warning::before {
+  background: var(--warning-color);
+}
+
+.notification-info {
+  background: linear-gradient(135deg, var(--background-primary) 0%, var(--primary-light, #e0f2fe) 100%);
+}
+
+.notification-info::before {
+  background: var(--primary-color);
+}
+
+.notification-icon {
+  font-size: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  animation: iconPulse 0.6s ease-out;
+}
+
+@keyframes iconPulse {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.notification-message {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  margin-top: -2px;
+}
+
+.notification-close:hover {
+  background: var(--background-tertiary);
+  color: var(--text-primary);
+  transform: scale(1.1);
+}
+
+/* ===== GALLERY MODAL STYLES ===== */
+.gallery-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.gallery-modal {
+  background: var(--background-primary);
+  border-radius: var(--radius-2xl);
+  max-width: 90vw;
+  max-height: 90vh;
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-xl);
+  animation: modalSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.gallery-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--background-tertiary);
+  background: var(--background-secondary);
+}
+
+.gallery-modal-title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  max-width: 80%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--space-2);
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+.gallery-close-btn:hover {
+  background: var(--background-tertiary);
+  color: var(--text-primary);
+  transform: scale(1.1);
+}
+
+.gallery-modal-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-image-container {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background-primary);
+  min-height: 400px;
+}
+
+.modal-main-image {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-nav-arrows {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  padding: 0 var(--space-6);
+  pointer-events: none;
+}
+
+.modal-nav-arrow {
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  width: 50px;
+  height: 50px;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  pointer-events: auto;
+  backdrop-filter: blur(8px);
+}
+
+.modal-nav-arrow:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.1);
+}
+
+.modal-nav-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.modal-image-counter {
+  position: absolute;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+}
+
+.modal-thumbnails {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  overflow-x: auto;
+  background: var(--background-secondary);
+  border-top: 1px solid var(--background-tertiary);
+  justify-content: center;
+  max-height: 120px;
+}
+
+.modal-thumbnail-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  opacity: 0.6;
+  transform: scale(0.9);
+}
+
+.modal-thumbnail-btn:hover {
+  opacity: 0.8;
+  transform: scale(0.95);
+}
+
+.modal-thumbnail-btn.active {
+  opacity: 1;
+  transform: scale(1);
+  box-shadow: 0 0 0 3px var(--primary-color);
+}
+
+.modal-thumbnail-img {
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  display: block;
+}
+
 /* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 1024px) {
   .nav-content {
@@ -1497,6 +2119,59 @@ onUnmounted(() => {
   
   .ingredient-item {
     padding: var(--space-3);
+  }
+  
+  .notification-overlay {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+  }
+  
+  .notification {
+    min-width: auto;
+    max-width: none;
+    padding: 14px 16px;
+  }
+  
+  .notification-title {
+    font-size: var(--font-size-xs);
+  }
+  
+  .notification-message {
+    font-size: var(--font-size-xs);
+  }
+  
+  .gallery-modal {
+    max-width: 95vw;
+    max-height: 95vh;
+  }
+  
+  .gallery-modal-header {
+    padding: var(--space-4);
+  }
+  
+  .gallery-modal-title {
+    font-size: var(--font-size-lg);
+  }
+  
+  .modal-thumbnails {
+    padding: var(--space-4);
+    gap: var(--space-2);
+  }
+  
+  .modal-thumbnail-img {
+    width: 60px;
+    height: 45px;
+  }
+  
+  .modal-nav-arrow {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
+  
+  .modal-main-image {
+    max-height: 60vh;
   }
 }
 </style>
