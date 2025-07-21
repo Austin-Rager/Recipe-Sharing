@@ -3,7 +3,7 @@
 
    <div v-if="showConfirmDialog" class="confirm-overlay" @click.self="cancelConfirm">
      <div class="confirm-modal">
-       <div class="confirm-icon">{{ confirmDialog.icon }}</div>
+       <i :data-lucide="confirmDialog.icon" class="confirm-icon-lucide"></i>
        <h3 class="confirm-title">{{ confirmDialog.title }}</h3>
        <p class="confirm-message">{{ confirmDialog.message }}</p>
        <div class="confirm-actions">
@@ -17,10 +17,9 @@
      </div>
    </div>
 
-  
    <div v-if="notification.show" class="notification-overlay">
      <div :class="['notification', `notification-${notification.type}`]">
-       <div class="notification-icon">{{ notification.icon }}</div>
+       <i :data-lucide="notification.icon" class="notification-icon-lucide"></i>
        <div class="notification-content">
          <div v-if="notification.title" class="notification-title">{{ notification.title }}</div>
          <div class="notification-message">{{ notification.message }}</div>
@@ -39,7 +38,10 @@
    <div v-else class="main-app">
      <nav class="navbar">
        <div class="nav-content">
-         <h1 class="logo">🍳 FlavorCraft</h1>
+         <h1 class="logo">
+           <i data-lucide="chef-hat" class="logo-icon"></i>
+           FlavorCraft
+         </h1>
 
          <div class="nav-center">
            <div class="search-bar">
@@ -49,7 +51,7 @@
                v-model="searchQuery"
                @keyup.enter="performSearch"
              />
-             <span class="search-icon">🔍</span>
+             <i data-lucide="search" class="search-icon"></i>
            </div>
          </div>
 
@@ -78,10 +80,10 @@
                    class="profile-avatar-img"
                    loading="lazy"
                  />
-                 <span v-else class="profile-icon">👤</span>
+                 <i v-else data-lucide="user" class="profile-icon"></i>
                </div>
                <span class="profile-name">{{ currentUser.name || currentUser.username || 'User' }}</span>
-               <span class="dropdown-arrow">▼</span>
+               <i data-lucide="chevron-down" class="dropdown-arrow"></i>
              </div>
 
              <div class="profile-dropdown" v-if="showProfileMenu">
@@ -94,7 +96,7 @@
                      class="profile-avatar-img-large"
                      loading="lazy"
                    />
-                   <span v-else class="profile-icon-large">👤</span>
+                   <i v-else data-lucide="user" class="profile-icon-large"></i>
                  </div>
                  <div class="profile-info">
                    <h4>{{ currentUser.name || currentUser.username || 'User' }}</h4>
@@ -131,23 +133,25 @@
      <div class="main-content-area">
        <div v-if="isLoadingInitial" class="loading-overlay">
          <div class="loading-content">
-           <div class="loading-spinner">🍳</div>
-           <div class="loading-text">Loading delicious recipes...</div>
+           <i data-lucide="chef-hat" class="loading-spinner"></i>
+           <div class="loading-text">Loading recipes...</div>
          </div>
        </div>
 
        <div v-else-if="apiError" class="error-overlay" @click.self="closeError">
          <div class="error-modal">
-           <div class="error-icon">⚠️</div>
+           <i data-lucide="alert-triangle" class="error-icon"></i>
            <h3 class="error-title">Connection Error</h3>
            <p class="error-message">{{ apiError }}</p>
            <p class="error-message">Don't worry! We're showing sample recipes so you can still browse.</p>
            <div class="error-actions">
              <button @click="retryConnection" class="btn-primary">
-               🔄 Try Again
+               <i data-lucide="refresh-cw" class="btn-icon"></i>
+               Try Again
              </button>
              <button @click="closeError" class="btn-secondary">
-               📖 Browse Samples
+               <i data-lucide="book-open" class="btn-icon"></i>
+               Browse Samples
              </button>
            </div>
          </div>
@@ -196,7 +200,10 @@
          <div class="main-content">
            <div class="recipes-section">
              <div class="recipe-of-day" v-if="recipeOfDay && !isSearchActive">
-               <h2>Recipe of the Day 🌟</h2>
+               <h2>
+                 <i data-lucide="award" class="section-icon"></i>
+                 Recipe of the Day
+               </h2>
                <div class="featured-card" @click="openRecipe(recipeOfDay)">
                  <img :src="getRecipeImage(recipeOfDay)" :alt="getRecipeTitle(recipeOfDay)">
                  <div class="featured-content">
@@ -207,14 +214,20 @@
                        <span class="stars">{{ '★'.repeat(Math.floor(getRecipeRating(recipeOfDay))) }}{{ '☆'.repeat(5 - Math.floor(getRecipeRating(recipeOfDay))) }}</span>
                        <span>({{ getRecipeLikes(recipeOfDay) }})</span>
                      </div>
-                     <span class="cook-time">⏱️ {{ getRecipeTime(recipeOfDay) }}</span>
+                     <span class="cook-time">
+                       <i data-lucide="clock" class="time-icon"></i>
+                       {{ getRecipeTime(recipeOfDay) }}
+                     </span>
                    </div>
                  </div>
                </div>
              </div>
 
              <div class="trending-section" v-if="!isSearchActive">
-               <h2>🔥 Trending</h2>
+               <h2>
+                 <i data-lucide="trending-up" class="section-icon"></i>
+                 Trending
+               </h2>
                <div class="trending-cards">
                  <div
                    v-for="trending in trendingRecipes"
@@ -233,7 +246,8 @@
              <div class="search-results-header" v-if="isSearchActive">
                <h2>Search Results for "{{ activeSearchQuery }}" ({{ filteredRecipes.length }} found)</h2>
                <button class="clear-search-btn" @click="clearSearch">
-                 ✕ Clear Search
+                 <i data-lucide="x" class="btn-icon"></i>
+                 Clear Search
                </button>
              </div>
 
@@ -256,7 +270,9 @@
                      :class="{ liked: isRecipeLiked(recipe) }"
                      @click.stop="toggleLike(recipe)"
                    >
-                     {{ isRecipeLiked(recipe) ? '❤️' : '🤍' }}
+                     <i :data-lucide="isRecipeLiked(recipe) ? 'heart' : 'heart'" 
+                        :class="{ 'heart-filled': isRecipeLiked(recipe), 'heart-empty': !isRecipeLiked(recipe) }"
+                        class="heart-icon"></i>
                    </button>
                  </div>
                  <div class="card-content">
@@ -275,7 +291,7 @@
              </div>
 
              <div class="no-search-results" v-if="isSearchActive && filteredRecipes.length === 0">
-               <div class="no-results-icon">🔍</div>
+               <i data-lucide="search" class="no-results-icon"></i>
                <h3>No recipes found</h3>
                <p>Try searching for something else or check your spelling</p>
                <button class="clear-search-btn" @click="clearSearch">
@@ -352,6 +368,15 @@ import MyRecipesPage from './components/MyRecipes.vue';
 import Register from './components/Register.vue';
 import RecipeDetails from './components/RecipeDetails.vue';
 
+function reinitializeIcons() {
+  setTimeout(() => {
+    if (window.lucide) {
+      window.lucide.createIcons();
+      console.log('Icons reinitialized');
+    }
+  }, 50);
+}
+
 const API_BASE_URL = 'http://localhost:8080';
 
 const searchQuery = ref('')
@@ -379,7 +404,6 @@ const apiError = ref('')
 const apiRecipes = ref([])
 const likedRecipeIds = ref(new Set())
 
-
 const showConfirmDialog = ref(false)
 const confirmDialog = ref({
   title: '',
@@ -398,17 +422,18 @@ const notification = ref({
   icon: ''
 })
 
-
 function showStyledConfirm(options) {
   confirmDialog.value = {
     title: options.title || 'Confirm Action',
     message: options.message || 'Are you sure?',
-    icon: options.icon || '❓',
+    icon: options.icon || 'help-circle',
     confirmText: options.confirmText || 'Confirm',
     cancelText: options.cancelText || 'Cancel',
     onConfirm: options.onConfirm || (() => {})
   }
   showConfirmDialog.value = true
+  
+  reinitializeIcons();
 }
 
 function confirmAction() {
@@ -424,10 +449,10 @@ function cancelConfirm() {
 
 function showNotification(type, message, title = '') {
   const iconMap = {
-    success: '✅',
-    error: '⚠️',
-    warning: '⚠️',
-    info: 'ℹ️'
+    success: 'check-circle',
+    error: 'alert-triangle',
+    warning: 'alert-triangle',
+    info: 'info'
   }
   
   notification.value = {
@@ -435,9 +460,10 @@ function showNotification(type, message, title = '') {
     type,
     title,
     message,
-    icon: iconMap[type] || '🍳'
+    icon: iconMap[type] || 'chef-hat'
   }
   
+  reinitializeIcons();
   
   setTimeout(() => {
     hideNotification()
@@ -527,20 +553,18 @@ function convertBackendRecipe(backendRecipe) {
   };
 }
 
-
 function closeError() {
   apiError.value = '';
 }
 
-
-function handleEditRecipe(recipe) {
-  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with recipe:', recipe)
+function handleEditRecipe(recipeId) {
+  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with ID:', recipeId)
   
   const recipeId = recipe.id || recipe._id
   
-  if (!recipeId) {
-    console.error('No recipe ID found:', recipe)
-    showNotification('error', 'Recipe ID not found. Cannot edit recipe.', 'Recipe Error');
+  if (!recipeToEditData) {
+    console.error('Recipe not found in local data:', recipeId)
+    showNotification('error', 'Recipe not found. It may have been deleted.', 'Recipe Not Found');
     return
   }
   
@@ -562,7 +586,6 @@ function handleEditRecipe(recipe) {
   
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
-
 
 function parseTime(timeString) {
  if (!timeString) return 30;
@@ -754,6 +777,7 @@ async function checkAuthStatus() {
    apiRecipes.value = [];
  } finally {
    isLoadingInitial.value = false;
+   reinitializeIcons();
  }
 }
 
@@ -762,7 +786,6 @@ async function retryConnection() {
  apiError.value = '';
  await checkAuthStatus();
 }
-
 
 async function toggleLike(recipe) {
  if (!isLoggedIn.value) {
@@ -781,7 +804,7 @@ async function toggleLike(recipe) {
    } else {
      await api.likeRecipe(recipeId);
      likedRecipeIds.value.add(recipeId);
-     showNotification('success', `Added "${getRecipeTitle(recipe)}" to favorites!`, 'Recipe Liked ❤️');
+     showNotification('success', `Added "${getRecipeTitle(recipe)}" to favorites!`, 'Recipe Liked');
    }
    
    recipe.isLiked = !wasLiked;
@@ -792,6 +815,8 @@ async function toggleLike(recipe) {
      recipe._original.likes += wasLiked ? -1 : 1;
    }
    
+   reinitializeIcons();
+   
  } catch (error) {
    console.error('Failed to toggle like:', error);
    showNotification('error', 'Failed to update like status. Please try again.', 'Connection Error');
@@ -800,7 +825,6 @@ async function toggleLike(recipe) {
 
 async function openRecipe(recipe) {
   try {
-    // If we have basic recipe data, show it immediately
     selectedRecipe.value = recipe;
     showRecipeDetails.value = true;
     showLiked.value = false;
@@ -810,7 +834,6 @@ async function openRecipe(recipe) {
     showMyRecipes.value = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Then try to fetch complete recipe data if we have an ID
     const recipeId = getRecipeId(recipe);
     if (recipeId && !recipe.ingredients) {
       const fullRecipe = await api.getRecipeById(recipeId);
@@ -818,7 +841,6 @@ async function openRecipe(recipe) {
     }
   } catch (error) {
     console.error('Failed to fetch recipe details:', error);
-    // Continue with the basic recipe data we have
   }
 }
 
@@ -843,11 +865,12 @@ function goToHome() {
  showProfileMenu.value = false;
  selectedRecipe.value = null;
  clearFilters();
+ 
+ reinitializeIcons();
 }
 
 function goToCreateRecipe() {
  if (!isLoggedIn.value) {
-  
    showNotification('warning', 'Please log in to share your culinary creations', 'Login Required');
    return;
  }
@@ -863,10 +886,8 @@ function goToCreateRecipe() {
  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-
 function goToLikedRecipes() {
  if (!isLoggedIn.value) {
-
    showNotification('warning', 'Please log in to view your favorite recipes', 'Login Required');
    return;
  }
@@ -881,7 +902,6 @@ function goToLikedRecipes() {
  selectedRecipe.value = null;
  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-
 
 function goToMyRecipes() {
  if (!isLoggedIn.value) {
@@ -908,6 +928,9 @@ function goToProfile() {
 
 function toggleProfileMenu() {
  showProfileMenu.value = !showProfileMenu.value;
+ if (showProfileMenu.value) {
+   reinitializeIcons();
+ }
 }
 
 function showLogin() {
@@ -920,8 +943,8 @@ function showRegister() {
 
 function goBackToHome() {
  showLoginPage.value = false;
+ reinitializeIcons();
 }
-
 
 async function handleLoginFromRegister(userData) {
  isLoggedIn.value = true;
@@ -941,8 +964,11 @@ async function handleLoginFromRegister(userData) {
  }
  
  checkAuthStatus();
+ 
+ reinitializeIcons();
+ 
  setTimeout(() => {
-   showNotification('success', `Welcome back, ${currentUser.value.name || currentUser.value.username}!`, 'Login Successful 🎉');
+   showNotification('success', `Welcome back, ${currentUser.value.name || currentUser.value.username}!`, 'Login Successful');
  }, 500);
 }
 
@@ -952,14 +978,13 @@ function handleLoginSuccess(userData) {
  checkAuthStatus();
 }
 
-
 function showLogoutConfirm() {
  showProfileMenu.value = false;
  
  showStyledConfirm({
    title: 'Confirm Logout',
-   message: 'Are you sure you want to logout? 👋',
-   icon: '👋',
+   message: 'Are you sure you want to logout?',
+   icon: 'log-out',
    confirmText: 'Yes, Logout',
    cancelText: 'Stay Logged In',
    onConfirm: performLogout
@@ -975,15 +1000,15 @@ async function performLogout() {
    
    await checkAuthStatus();
    
-
-   showNotification('info', 'Thanks for visiting FlavorCraft! Come back soon! 👋', 'Logged Out');
+   reinitializeIcons();
+   
+   showNotification('info', 'Thanks for visiting FlavorCraft! Come back soon!', 'Logged Out');
    goToHome();
  } catch (error) {
    console.error('Logout failed:', error);
    showNotification('error', 'Logout failed. Please try again.', 'Error');
  }
 }
-
 
 async function logout() {
  showLogoutConfirm();
@@ -1001,14 +1026,12 @@ function clearFilters() {
  activeSearchQuery.value = '';
 }
 
-
 function handleRecipeCreated(newRecipe) {
  const convertedRecipe = convertBackendRecipe(newRecipe);
  apiRecipes.value.unshift(convertedRecipe);
  
-
  setTimeout(() => {
-   showNotification('success', `"${getRecipeTitle(convertedRecipe)}" has been published successfully!`, 'Recipe Published 🎉');
+   showNotification('success', `"${getRecipeTitle(convertedRecipe)}" has been published successfully!`, 'Recipe Published');
  }, 100);
 }
 
@@ -1019,7 +1042,7 @@ function handleRecipeDeleted(recipeId) {
  }
  
  setTimeout(() => {
-   alert(`Recipe has been deleted successfully!`);
+   showNotification('success', 'Recipe has been deleted successfully!', 'Recipe Deleted');
  }, 100);
 }
 
@@ -1034,6 +1057,21 @@ onMounted(() => {
  console.log('Home page loaded');
  document.addEventListener('click', handleClickOutside);
  checkAuthStatus();
+ 
+ // Initialize Lucide icons with longer delay
+ setTimeout(() => {
+   if (window.lucide) {
+     window.lucide.createIcons();
+     console.log('Initial icons loaded');
+   }
+ }, 200);
+ 
+ // Reinitialize periodically for dynamic content
+ setInterval(() => {
+   if (window.lucide) {
+     window.lucide.createIcons();
+   }
+ }, 1000);
 });
 
 onUnmounted(() => {
@@ -1044,8 +1082,546 @@ defineExpose({
  handleLoginSuccess
 });
 </script>
-<style>
 
+<style>
+/* ===== LUCIDE ICON BASE STYLES ===== */
+[data-lucide] {
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ===== NAVIGATION ICON STYLES ===== */
+.logo-icon {
+  width: 28px;
+  height: 28px;
+  color: #ff6b6b;
+  margin-right: 8px;
+  stroke-width: 2.5;
+}
+
+.search-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.profile-icon,
+.profile-icon-large {
+  width: 100%;
+  height: 100%;
+  color: white;
+  stroke-width: 1.5;
+}
+
+.dropdown-arrow {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  transition: transform var(--transition-fast);
+}
+
+.profile-menu:hover .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+/* ===== NOTIFICATION & DIALOG ICONS ===== */
+.notification-icon-lucide {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.confirm-icon-lucide {
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--space-6);
+  color: var(--primary-color);
+}
+
+/* ===== LOADING & ERROR ICONS ===== */
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  color: var(--primary-color);
+  margin-bottom: var(--space-4);
+}
+
+.error-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--danger-color);
+  margin-bottom: var(--space-6);
+}
+
+/* ===== BUTTON ICONS ===== */
+.btn-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  stroke-width: 2;
+}
+
+/* ===== SECTION HEADER ICONS ===== */
+.section-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--primary-color);
+  margin-right: 12px;
+  stroke-width: 2.5;
+}
+
+.time-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+  margin-right: 4px;
+  stroke-width: 2;
+}
+
+/* ===== HEART ICON (LIKE BUTTON) ===== */
+.heart-icon {
+  width: 20px;
+  height: 20px;
+  color: #ef4444;
+  transition: all 0.3s ease;
+  stroke-width: 2;
+}
+
+.heart-icon.heart-empty {
+  fill: none;
+  stroke: #ef4444;
+}
+
+.heart-icon.heart-filled {
+  fill: #ef4444;
+  stroke: #ef4444;
+}
+
+.like-btn:hover .heart-icon {
+  transform: scale(1.1);
+}
+
+/* ===== NO RESULTS ICON ===== */
+.no-results-icon {
+  width: 64px;
+  height: 64px;
+  color: var(--text-muted);
+  opacity: 0.6;
+  margin-bottom: var(--space-6);
+  stroke-width: 1.5;
+}
+
+/* ===== NOTIFICATION & DIALOG ICONS ===== */
+.notification-icon-lucide {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  animation: iconPulse 0.6s ease-out;
+}
+
+.confirm-icon-lucide {
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--space-6);
+  animation: bounce 0.6s ease-out;
+  color: var(--primary-color);
+}
+
+
+
+/* ===== LOADING & ERROR ICONS ===== */
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  color: var(--primary-color);
+  animation: spin 1s linear infinite;
+  margin-bottom: var(--space-4);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.error-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--danger-color);
+  margin-bottom: var(--space-6);
+  animation: shake 0.6s ease-out;
+}
+
+/* ===== BUTTON ICONS ===== */
+.btn-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  stroke-width: 2;
+}
+
+/* ===== SECTION HEADER ICONS ===== */
+.section-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--primary-color);
+  margin-right: 12px;
+  stroke-width: 2.5;
+}
+
+.time-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+  margin-right: 4px;
+  stroke-width: 2;
+}
+
+/* ===== HEART ICON (LIKE BUTTON) ===== */
+.heart-icon {
+  width: 20px;
+  height: 20px;
+  color: #ef4444;
+  transition: all 0.3s ease;
+  stroke-width: 2;
+}
+
+.heart-icon.heart-empty {
+  fill: none;
+  stroke: #ef4444;
+}
+
+.heart-icon.heart-filled {
+  fill: #ef4444;
+  stroke: #ef4444;
+  animation: heartBeat 0.6s ease-out;
+}
+
+
+.like-btn:hover .heart-icon {
+  transform: scale(1.1);
+}
+
+/* ===== NO RESULTS ICON ===== */
+.no-results-icon {
+  width: 64px;
+  height: 64px;
+  color: var(--text-muted);
+  opacity: 0.6;
+  margin-bottom: var(--space-6);
+  stroke-width: 1.5;
+}
+
+/* ===== STYLED CONFIRMATION DIALOG ===== */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.confirm-modal {
+  background: var(--background-primary);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--background-tertiary);
+  max-width: 450px;
+  width: 90%;
+  text-align: center;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.confirm-title {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+
+.confirm-message {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: var(--space-8);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-danger {
+  padding: var(--space-3) var(--space-6);
+  background: linear-gradient(135deg, var(--danger-color), var(--danger-hover));
+  border: none;
+  border-radius: var(--radius-full);
+  color: white;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, var(--danger-hover), var(--danger-color));
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ===== STYLED NOTIFICATIONS ===== */
+.notification-overlay {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.notification {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  background: var(--background-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--background-tertiary);
+  position: relative;
+  overflow: hidden;
+  min-width: 320px;
+  max-width: 400px;
+  pointer-events: auto;
+
+}
+
+
+.notification::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--primary-color);
+}
+
+.notification-success {
+  background: linear-gradient(135deg, var(--background-primary) 0%, var(--success-light) 100%);
+}
+
+.notification-success::before {
+  background: var(--success-color);
+}
+
+.notification-error {
+  background: linear-gradient(135deg, var(--background-primary) 0%, #fee2e2 100%);
+}
+
+.notification-error::before {
+  background: var(--danger-color);
+}
+
+.notification-warning {
+  background: linear-gradient(135deg, var(--background-primary) 0%, #fef3c7 100%);
+}
+
+.notification-warning::before {
+  background: var(--warning-color);
+}
+
+.notification-info {
+  background: linear-gradient(135deg, var(--background-primary) 0%, var(--primary-light) 100%);
+}
+
+.notification-info::before {
+  background: var(--primary-color);
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.notification-message {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  margin-top: -2px;
+}
+
+.notification-close:hover {
+  background: var(--background-tertiary);
+  color: var(--text-primary);
+  transform: scale(1.1);
+}
+
+/* ===== ENHANCED LOADING OVERLAY ===== */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+}
+
+.loading-content {
+  text-align: center;
+  padding: var(--space-8);
+  background: var(--background-primary);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--background-tertiary);
+  animation: fadeInScale 0.3s ease-out;
+}
+
+
+.loading-text {
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ===== ENHANCED ERROR MODAL ===== */
+.error-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.error-modal {
+  background: var(--background-primary);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--background-tertiary);
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.error-title {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+
+.error-message {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: var(--space-4);
+}
+
+.error-actions {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: var(--space-6);
+}
+
+.btn-primary {
+  padding: var(--space-3) var(--space-6);
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  border: none;
+  border-radius: var(--radius-full);
+  color: white;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--primary-hover), var(--primary-color));
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-secondary {
+  padding: var(--space-3) var(--space-6);
+  background: var(--background-secondary);
+  border: 2px solid var(--background-tertiary);
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn-secondary:hover {
+  background: var(--background-tertiary);
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+}
+
+/* ===== EXISTING STYLES (unchanged) ===== */
 .profile-avatar img,
 .profile-avatar-large img {
   width: 100%;
@@ -1055,7 +1631,6 @@ defineExpose({
   display: block;
 }
 
-/* Remove background when image loads */
 .profile-avatar:has(img),
 .profile-avatar-large:has(img) {
   background: transparent !important;
@@ -1091,7 +1666,6 @@ defineExpose({
   border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
-/* Reset and Base Styles */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -1106,13 +1680,11 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Main Container */
 .home-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
 }
 
-/* ===== NAVIGATION STYLES ===== */
 .nav-content {
   max-width: 1400px;
   margin: 0 auto;
@@ -1133,7 +1705,6 @@ body {
   gap: var(--space-2);
 }
 
-/* Search Bar */
 .nav-center {
   display: flex;
   justify-content: center;
@@ -1242,12 +1813,6 @@ body {
  margin-top: var(--space-8);
 }
 
-.no-results-icon {
- font-size: 4rem;
- margin-bottom: var(--space-6);
- opacity: 0.6;
-}
-
 .no-search-results h3 {
  font-size: var(--font-size-2xl);
  font-weight: 600;
@@ -1262,8 +1827,6 @@ body {
  line-height: 1.6;
 }
 
-/* Navigation Actions */
-/* Only target auth buttons (login/register) when not logged in */
 .auth-buttons {
   display: flex;
   align-items: center;
@@ -1291,7 +1854,6 @@ body {
   transform: translateY(-2px);
 }
 
-/* Keep the logged-in nav buttons unchanged */
 .nav-buttons {
   display: flex;
   align-items: center;
@@ -1299,7 +1861,6 @@ body {
 }
 
 .nav-buttons .nav-btn {
-  /* Keep existing styles for logged-in buttons */
   padding: var(--space-3) var(--space-6);
   border: 2px solid transparent;
   background: var(--background-secondary);
@@ -1339,8 +1900,6 @@ body {
   color: white;
 }
 
-
-/* ===== PROFILE SECTION ===== */
 .nav-actions {
   display: flex;
   align-items: center;
@@ -1389,17 +1948,6 @@ body {
   font-size: var(--font-size-sm);
 }
 
-.dropdown-arrow {
-  font-size: var(--font-size-xs);
-  color: var(--text-muted);
-  transition: transform var(--transition-fast);
-}
-
-.profile-menu:hover .dropdown-arrow {
-  transform: rotate(180deg);
-}
-
-/* Profile Dropdown */
 .profile-dropdown {
   position: absolute;
   top: calc(100% + var(--space-2));
@@ -1471,7 +2019,6 @@ body {
   margin: var(--space-2) 0;
 }
 
-/* ===== MAIN CONTENT LAYOUT ===== */
 .main-content {
   max-width: 1200px;
   margin: 0 auto;
@@ -1487,7 +2034,6 @@ body {
   gap: var(--space-8);
 }
 
-/* ===== RECIPE CARDS ===== */
 .recipe-of-day h2,
 .trending-section h2 {
   font-size: var(--font-size-3xl);
@@ -1647,7 +2193,6 @@ body {
   width: 44px;
   height: 44px;
   cursor: pointer;
-  font-size: var(--font-size-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1735,13 +2280,13 @@ body {
 .filter-options {
   display: flex !important;
   flex-direction: column !important;
-  gap: 12px !important; /* Space between Easy, Med, Hard */
+  gap: 12px !important;
 }
 
-filter-options label {
+.filter-options label {
   display: flex !important;
   align-items: center !important;
-  gap: 12px !important; /* Space between checkbox and text */
+  gap: 12px !important;
   font-size: 15px !important;
   cursor: pointer !important;
   padding: 8px 12px !important;
@@ -1749,7 +2294,6 @@ filter-options label {
   transition: background-color 150ms ease-in-out !important;
   margin-bottom: 0 !important;
 }
-
 
 .filter-options label:hover {
   background: var(--background-secondary);
@@ -1795,6 +2339,58 @@ filter-options label {
 .clear-filters:hover {
   background: var(--background-tertiary);
   color: var(--text-primary);
+}
+
+/* ===== MOBILE RESPONSIVE ===== */
+@media (max-width: 480px) {
+  .notification-overlay {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+  }
+  
+  .notification {
+    min-width: auto;
+    max-width: none;
+    padding: 14px 16px;
+  }
+  
+  .notification-title {
+    font-size: var(--font-size-xs);
+  }
+  
+  .notification-message {
+    font-size: var(--font-size-xs);
+  }
+  
+  .confirm-modal,
+  .error-modal {
+    padding: var(--space-6);
+    margin: var(--space-4);
+  }
+  
+  .confirm-actions,
+  .error-actions {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .logo-icon {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .section-icon {
+    width: 24px;
+    height: 24px;
+  }
 }
 
 /* ===== RESPONSIVE DESIGN ===== */
