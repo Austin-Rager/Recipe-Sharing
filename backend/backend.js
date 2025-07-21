@@ -534,6 +534,33 @@ app.get("/recipes", async (req, res) => {
     }
 });
 
+// Get recipe by ID
+app.get("/recipe/:id", async (req, res) => {
+    try {
+        const recipeId = req.params.id;
+        
+        // Validate the ID format (assuming MongoDB ObjectId)
+        if (!recipeId || !recipeId.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({ error: "Invalid recipe ID format" });
+        }
+        
+        const recipe = await Recipe.findById(recipeId);
+        
+        if (!recipe) {
+            return res.status(404).json({ error: "Recipe not found" });
+        }
+        
+        res.status(200).json({
+            message: "Recipe retrieved successfully",
+            recipe: recipe
+        });
+        
+    } catch (error) {
+        console.error("Get recipe by ID error:", error);
+        res.status(500).json({ error: "Failed to retrieve recipe" });
+    }
+});
+
 // Error handler for multer
 app.use((error, req, res, next) => {
     if (error instanceof multer.MulterError) {
@@ -566,7 +593,8 @@ app.get("/me", async (req, res) => {
         res.json({
             username: user.username,
             name: user.name,
-            email: user.email
+            email: user.email,
+            signupDate: user.signupDate
         });
     } catch (error) {
         console.error("Get user error:", error);

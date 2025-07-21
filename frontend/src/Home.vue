@@ -159,12 +159,12 @@
          @open-recipe="openRecipe"
        />
        
-       <ProfilePage 
-         v-else-if="showProfile && isLoggedIn" 
-         @go-home="goToHome" 
-         @go-to-create="goToCreateRecipe"
-         @edit-recipe="handleEditRecipe"
-       />
+        <ProfilePage 
+          v-else-if="showProfile && isLoggedIn" 
+          @go-home="goToHome" 
+          @go-to-create="goToCreateRecipe"
+          @go-to-edit="handleEditRecipe"  
+        />
 
        <MyRecipesPage 
          v-else-if="showMyRecipes && isLoggedIn" 
@@ -533,23 +533,20 @@ function closeError() {
 }
 
 
-function handleEditRecipe(recipeId) {
-  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with ID:', recipeId)
+function handleEditRecipe(recipe) {
+  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with recipe:', recipe)
   
-  const recipeToEditData = apiRecipes.value.find(recipe => 
-    (recipe.id || recipe._id) === recipeId
-  )
+  const recipeId = recipe.id || recipe._id
   
-  if (!recipeToEditData) {
-    console.error('Recipe not found in local data:', recipeId)
-
-    showNotification('error', 'Recipe not found. It may have been deleted.', 'Recipe Not Found');
+  if (!recipeId) {
+    console.error('No recipe ID found:', recipe)
+    showNotification('error', 'Recipe ID not found. Cannot edit recipe.', 'Recipe Error');
     return
   }
   
-  console.log('🚀 Found recipe data:', recipeToEditData)
+  console.log('🚀 Using recipe ID:', recipeId)
   
-  recipeToEdit.value = recipeToEditData  
+  recipeToEdit.value = recipeId
   showEditRecipe.value = true
   showProfile.value = false
   showLiked.value = false
@@ -560,7 +557,7 @@ function handleEditRecipe(recipeId) {
   console.log('🚀 State after update:', { 
     showEditRecipe: showEditRecipe.value, 
     showProfile: showProfile.value,
-    recipeToEdit: !!recipeToEdit.value 
+    recipeToEdit: recipeToEdit.value 
   })
   
   window.scrollTo({ top: 0, behavior: 'smooth' })
