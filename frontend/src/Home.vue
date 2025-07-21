@@ -533,6 +533,10 @@ const api = {
 };
 
 function convertBackendRecipe(backendRecipe) {
+  console.log('🔄 Converting backend recipe:', backendRecipe.name);
+  console.log('🔄 Backend images data:', backendRecipe.images);
+  console.log('🔄 Backend images length:', backendRecipe.images?.length);
+  
   return {
     id: backendRecipe._id,
     title: backendRecipe.name,
@@ -540,7 +544,8 @@ function convertBackendRecipe(backendRecipe) {
     image: backendRecipe.images?.length > 0 
       ? backendRecipe.images[0].url 
       : "https://www.svgrepo.com/show/9389/fork-plate-knife.svg",
-
+    // 🎯 FIX: Preserve the full images array for the gallery!
+    images: backendRecipe.images || [],
     rating: backendRecipe.rating || 4.0,
     reviewCount: backendRecipe.likes || 0,
     cookTime: parseTime(backendRecipe.time),

@@ -4,7 +4,65 @@
       <!-- Recipe Header Section -->
       <div class="recipe-header" v-if="recipe">
         <div class="recipe-image">
-          <img :src="recipe.image" :alt="recipe.title" />
+          <!-- Image Gallery -->
+          <div class="image-gallery" v-if="recipe.images && recipe.images.length > 0">
+            <!-- Main Image Display -->
+            <div class="main-image-container">
+              <img 
+                :src="recipe.images[currentImageIndex]?.url || 'https://via.placeholder.com/400x300'" 
+                :alt="recipe.title" 
+                class="main-image clickable"
+                @error="handleImageError"
+                @click="openGalleryModal(currentImageIndex)"
+              />
+              
+              <!-- Navigation Arrows (only show if more than 1 image) -->
+              <div v-if="recipe.images.length > 1" class="image-nav-arrows">
+                <button 
+                  @click="previousImage" 
+                  class="nav-arrow nav-arrow-left"
+                  :disabled="currentImageIndex === 0"
+                >
+                  &#8249;
+                </button>
+                <button 
+                  @click="nextImage" 
+                  class="nav-arrow nav-arrow-right"
+                  :disabled="currentImageIndex >= recipe.images.length - 1"
+                >
+                  &#8250;
+                </button>
+              </div>
+              
+              <!-- Image Counter -->
+              <div v-if="recipe.images.length > 1" class="image-counter">
+                {{ currentImageIndex + 1 }} / {{ recipe.images.length }}
+              </div>
+            </div>
+            
+            <!-- Thumbnail Navigation (only show if more than 1 image) -->
+            <div v-if="recipe.images.length > 1" class="image-thumbnails">
+              <button
+                v-for="(image, index) in recipe.images"
+                :key="index"
+                @click="currentImageIndex = index"
+                :class="['thumbnail-btn', { 'active': currentImageIndex === index }]"
+              >
+                <img 
+                  :src="image.url || 'https://via.placeholder.com/60x45'" 
+                  :alt="`${recipe.title} image ${index + 1}`" 
+                  class="thumbnail-img clickable"
+                  @error="handleImageError"
+                  @click="openGalleryModal(index)" 
+                />
+              </button>
+            </div>
+          </div>
+          
+          <!-- Fallback for no images -->
+          <div v-else class="no-image">
+            <img src="https://via.placeholder.com/400x300?text=No+Images" :alt="recipe.title" class="clickable" @click="openGalleryModal(0)" />
+          </div>
         </div>
         <div class="recipe-info">
           <h1 class="recipe-title">{{ recipe.title }}</h1>
@@ -35,9 +93,6 @@
             </button>
             <button class="btn btn-edit" @click="editRecipe">
               <span>✏️ Edit</span> 
-            </button>
-            <button class="btn btn-save" @click="saveRecipe">
-              <span>📌 Save</span> 
             </button>
           </div>
         </div>
@@ -100,11 +155,74 @@
         </div>
       </div>
     </div>
+    
+    <!-- Full-Screen Image Gallery Modal -->
+    <div v-if="showGalleryModal" class="gallery-modal-overlay" @click="closeGalleryModal">
+      <div class="gallery-modal" @click.stop>
+        <!-- Modal Header -->
+        <div class="gallery-modal-header">
+          <h3 class="gallery-modal-title">{{ recipe.title }}</h3>
+          <button class="gallery-close-btn" @click="closeGalleryModal">✕</button>
+        </div>
+        
+        <!-- Main Modal Image -->
+        <div class="gallery-modal-content">
+          <div class="modal-image-container">
+            <img 
+              :src="recipe.images[modalImageIndex]?.url || 'https://via.placeholder.com/800x600'" 
+              :alt="`${recipe.title} image ${modalImageIndex + 1}`"
+              class="modal-main-image"
+              @error="handleImageError"
+            />
+            
+            <!-- Modal Navigation Arrows -->
+            <div v-if="recipe.images.length > 1" class="modal-nav-arrows">
+              <button 
+                @click="previousModalImage" 
+                class="modal-nav-arrow modal-nav-left"
+                :disabled="modalImageIndex === 0"
+              >
+                &#8249;
+              </button>
+              <button 
+                @click="nextModalImage" 
+                class="modal-nav-arrow modal-nav-right"
+                :disabled="modalImageIndex >= recipe.images.length - 1"
+              >
+                &#8250;
+              </button>
+            </div>
+            
+            <!-- Modal Image Counter -->
+            <div v-if="recipe.images.length > 1" class="modal-image-counter">
+              {{ modalImageIndex + 1 }} / {{ recipe.images.length }}
+            </div>
+          </div>
+          
+          <!-- Modal Thumbnail Strip -->
+          <div v-if="recipe.images.length > 1" class="modal-thumbnails">
+            <button
+              v-for="(image, index) in recipe.images"
+              :key="index"
+              @click="modalImageIndex = index"
+              :class="['modal-thumbnail-btn', { 'active': modalImageIndex === index }]"
+            >
+              <img 
+                :src="image.url || 'https://via.placeholder.com/80x60'" 
+                :alt="`${recipe.title} thumbnail ${index + 1}`" 
+                class="modal-thumbnail-img"
+                @error="handleImageError"
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 
 const props = defineProps({
   recipeData: {
@@ -117,6 +235,11 @@ const emit = defineEmits(['go-home'])
 
 // Ingredients checklist state
 const checkedIngredients = ref({})
+
+// Image gallery state
+const currentImageIndex = ref(0)
+const showGalleryModal = ref(false)
+const modalImageIndex = ref(0)
 
 // Use the recipe data from props
 const recipe = computed(() => {
@@ -166,6 +289,7 @@ const recipe = computed(() => {
     description: props.recipeData.description || 'Delicious recipe',
     image: props.recipeData.image || 
            (props.recipeData.images?.length > 0 ? props.recipeData.images[0].url : 'https://via.placeholder.com/400x300'),
+    images: props.recipeData.images || [],
     rating: props.recipeData.rating || 4.0,
     difficulty: props.recipeData.difficulty || 'Easy',
     time: props.recipeData.time || (props.recipeData.cookTime ? `${props.recipeData.cookTime}min` : '30 minutes'),
@@ -242,6 +366,59 @@ const clearIngredientProgress = () => {
   }
 }
 
+// Image gallery navigation methods
+const nextImage = () => {
+  if (currentImageIndex.value < recipe.value.images.length - 1) {
+    currentImageIndex.value++;
+  }
+};
+
+const previousImage = () => {
+  if (currentImageIndex.value > 0) {
+    currentImageIndex.value--;
+  }
+};
+
+// Handle image loading errors
+const handleImageError = (event) => {
+  console.warn('Image failed to load:', event.target.src);
+  event.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+};
+
+// Gallery modal functions
+const openGalleryModal = (imageIndex = 0) => {
+  console.log('🔍 Opening gallery modal with index:', imageIndex);
+  console.log('🔍 Recipe images available:', recipe.value?.images);
+  
+  if (!recipe.value?.images || recipe.value.images.length === 0) {
+    console.warn('⚠️ No images available to show in gallery');
+    return;
+  }
+  
+  modalImageIndex.value = imageIndex;
+  showGalleryModal.value = true;
+  // Prevent body scroll when modal is open
+  document.body.style.overflow = 'hidden';
+};
+
+const closeGalleryModal = () => {
+  showGalleryModal.value = false;
+  // Restore body scroll
+  document.body.style.overflow = 'auto';
+};
+
+const nextModalImage = () => {
+  if (modalImageIndex.value < recipe.value.images.length - 1) {
+    modalImageIndex.value++;
+  }
+};
+
+const previousModalImage = () => {
+  if (modalImageIndex.value > 0) {
+    modalImageIndex.value--;
+  }
+};
+
 // Navigation method
 function goToHome() {
   emit('go-home')
@@ -271,19 +448,50 @@ watch(checkedIngredients, (newState) => {
   }
 }, { deep: true })
 
-// Initialize checklist state on mount
+// Initialize checklist state on mount (moved to combined onMounted above)
+
+// Watch for recipe changes to reinitialize checklist and reset image index
+watch(() => props.recipeData, (newRecipe) => {
+  if (newRecipe) {
+    initializeIngredients(newRecipe)
+    // Reset image gallery to first image when recipe changes
+    currentImageIndex.value = 0;
+    modalImageIndex.value = 0;
+  }
+}, { immediate: true })
+
+// Keyboard navigation for modal
+const handleKeydown = (event) => {
+  if (!showGalleryModal.value) return;
+  
+  switch (event.key) {
+    case 'Escape':
+      closeGalleryModal();
+      break;
+    case 'ArrowLeft':
+      previousModalImage();
+      break;
+    case 'ArrowRight':
+      nextModalImage();
+      break;
+  }
+};
+
+// Add keyboard event listener when component mounts
 onMounted(() => {
   if (props.recipeData) {
     initializeIngredients(props.recipeData)
   }
-})
+  // Add keyboard event listener
+  document.addEventListener('keydown', handleKeydown);
+});
 
-// Watch for recipe changes to reinitialize checklist
-watch(() => props.recipeData, (newRecipe) => {
-  if (newRecipe) {
-    initializeIngredients(newRecipe)
-  }
-}, { immediate: true })
+// Remove keyboard event listener when component unmounts
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown);
+  // Restore body scroll in case modal was open
+  document.body.style.overflow = 'auto';
+});
 </script>
 
 <style scoped>
@@ -534,12 +742,344 @@ watch(() => props.recipeData, (newRecipe) => {
   flex: 0 0 400px;
 }
 
-.recipe-image img {
+/* ===== IMAGE GALLERY STYLES ===== */
+.image-gallery {
+  width: 100%;
+}
+
+.main-image-container {
+  position: relative;
+  margin-bottom: var(--space-4);
+}
+
+.main-image {
   width: 100%;
   height: 300px;
   object-fit: cover;
   border-radius: var(--radius-xl);
   background: linear-gradient(45deg, #f0f4f8, #d6e1ea);
+  transition: opacity 0.3s ease;
+}
+
+.image-nav-arrows {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  padding: 0 var(--space-4);
+  pointer-events: none;
+}
+
+.nav-arrow {
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  pointer-events: auto;
+  backdrop-filter: blur(4px);
+}
+
+.nav-arrow:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.1);
+}
+
+.nav-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.image-counter {
+  position: absolute;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+}
+
+.image-thumbnails {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding: var(--space-2) 0;
+}
+
+.thumbnail-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  opacity: 0.6;
+  transform: scale(0.9);
+}
+
+.thumbnail-btn:hover {
+  opacity: 0.8;
+  transform: scale(0.95);
+}
+
+.thumbnail-btn.active {
+  opacity: 1;
+  transform: scale(1);
+  box-shadow: 0 0 0 3px var(--primary-color);
+}
+
+.thumbnail-img {
+  width: 60px;
+  height: 45px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  display: block;
+}
+
+.no-image img {
+  width: 100%;
+  height: 300px;
+  object-fit: cover;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(45deg, #f0f4f8, #d6e1ea);
+}
+
+.clickable {
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.clickable:hover {
+  opacity: 0.9;
+}
+
+/* ===== GALLERY MODAL STYLES ===== */
+.gallery-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.gallery-modal {
+  background: var(--background-primary);
+  border-radius: var(--radius-2xl);
+  max-width: 90vw;
+  max-height: 90vh;
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-xl);
+  animation: modalSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.gallery-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--background-tertiary);
+  background: var(--background-secondary);
+}
+
+.gallery-modal-title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  max-width: 80%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--space-2);
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+.gallery-close-btn:hover {
+  background: var(--background-tertiary);
+  color: var(--text-primary);
+  transform: scale(1.1);
+}
+
+.gallery-modal-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-image-container {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background-primary);
+  min-height: 400px;
+}
+
+.modal-main-image {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-nav-arrows {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  padding: 0 var(--space-6);
+  pointer-events: none;
+}
+
+.modal-nav-arrow {
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  width: 50px;
+  height: 50px;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  pointer-events: auto;
+  backdrop-filter: blur(8px);
+}
+
+.modal-nav-arrow:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.1);
+}
+
+.modal-nav-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.modal-image-counter {
+  position: absolute;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+}
+
+.modal-thumbnails {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  overflow-x: auto;
+  background: var(--background-secondary);
+  border-top: 1px solid var(--background-tertiary);
+  justify-content: center;
+  max-height: 120px;
+}
+
+.modal-thumbnail-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  opacity: 0.6;
+  transform: scale(0.9);
+}
+
+.modal-thumbnail-btn:hover {
+  opacity: 0.8;
+  transform: scale(0.95);
+}
+
+.modal-thumbnail-btn.active {
+  opacity: 1;
+  transform: scale(1);
+  box-shadow: 0 0 0 3px var(--primary-color);
+}
+
+.modal-thumbnail-img {
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  display: block;
 }
 
 .recipe-info {
@@ -875,8 +1415,46 @@ watch(() => props.recipeData, (newRecipe) => {
     flex: none;
   }
   
-  .recipe-image img {
+  .main-image, .no-image img {
     height: 240px;
+  }
+  
+  .thumbnail-img {
+    width: 50px;
+    height: 38px;
+  }
+  
+  .gallery-modal {
+    max-width: 95vw;
+    max-height: 95vh;
+  }
+  
+  .gallery-modal-header {
+    padding: var(--space-4);
+  }
+  
+  .gallery-modal-title {
+    font-size: var(--font-size-lg);
+  }
+  
+  .modal-thumbnails {
+    padding: var(--space-4);
+    gap: var(--space-2);
+  }
+  
+  .modal-thumbnail-img {
+    width: 60px;
+    height: 45px;
+  }
+  
+  .modal-nav-arrow {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
+  
+  .modal-main-image {
+    max-height: 60vh;
   }
   
   .recipe-content {
