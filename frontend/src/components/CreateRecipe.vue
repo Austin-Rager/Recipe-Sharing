@@ -1,5 +1,17 @@
 <template>
   <div class="create-recipe-page">
+    <!-- Styled Notification -->
+    <div v-if="notification.show" class="notification-overlay">
+      <div :class="['notification', `notification-${notification.type}`]">
+        <div class="notification-icon">{{ notification.icon }}</div>
+        <div class="notification-content">
+          <div v-if="notification.title" class="notification-title">{{ notification.title }}</div>
+          <div class="notification-message">{{ notification.message }}</div>
+        </div>
+        <button class="notification-close" @click="hideNotification">✕</button>
+      </div>
+    </div>
+
     <div class="create-recipe-container">
       <div class="page-header">
         <button class="back-btn" @click="goBack">
@@ -319,7 +331,40 @@ const emit = defineEmits(['go-home', 'recipe-created'])
 
 const fileInput = ref(null)
 const isSaving = ref(false)
-const selectedImages = ref([]) // Store selected images with their preview URLs
+const selectedImages = ref([])
+
+const notification = ref({
+  show: false,
+  type: 'info',
+  title: '',
+  message: '',
+  icon: ''
+})
+
+function showNotification(type, message, title = '') {
+  const iconMap = {
+    success: '✅',
+    error: '⚠️',
+    warning: '⚠️',
+    info: 'ℹ️'
+  }
+  
+  notification.value = {
+    show: true,
+    type,
+    title,
+    message,
+    icon: iconMap[type] || '🍳'
+  }
+  
+  setTimeout(() => {
+    hideNotification()
+  }, 5000)
+}
+
+function hideNotification() {
+  notification.value.show = false
+}
 
 const api = {
   async request(endpoint, options = {}) {
@@ -357,13 +402,12 @@ const api = {
     });
   },
 
-  // Method for creating recipe with images using FormData
   async createRecipeWithImages(formData) {
     const url = `${API_BASE_URL}/recipe`;
     
     const response = await fetch(url, {
       method: 'POST',
-      body: formData, // Don't set Content-Type header - let browser handle it
+      body: formData,
       credentials: 'include'
     });
     
@@ -434,27 +478,24 @@ function triggerFileInput() {
   fileInput.value?.click()
 }
 
-// UPDATED: Handle image upload function
 function handleImageUpload(event) {
   const files = Array.from(event.target.files);
   
   if (files.length === 0) return;
   
-  // Check if total images exceed limit
   if (selectedImages.value.length + files.length > 5) {
-    alert('You can only upload up to 5 images total.');
+    showNotification('warning', 'You can only upload up to 5 images total', 'Upload Limit');
     if (fileInput.value) {
       fileInput.value.value = '';
     }
     return;
   }
 
-  const maxSize = 5 * 1024 * 1024; // 5MB
+  const maxSize = 5 * 1024 * 1024;
   
-  // Validate each file
   for (const file of files) {
     if (file.size > maxSize) {
-      alert(`Image "${file.name}" is too large. Please choose images smaller than 5MB.`);
+      showNotification('error', `Image "${file.name}" is too large. Please choose images smaller than 5MB`, 'File Too Large');
       if (fileInput.value) {
         fileInput.value.value = '';
       }
@@ -462,7 +503,7 @@ function handleImageUpload(event) {
     }
     
     if (!file.type.startsWith('image/')) {
-      alert(`"${file.name}" is not a valid image file.`);
+      showNotification('error', `"${file.name}" is not a valid image file`, 'Invalid File Type');
       if (fileInput.value) {
         fileInput.value.value = '';
       }
@@ -470,7 +511,6 @@ function handleImageUpload(event) {
     }
   }
 
-  // Create preview URLs and add to selectedImages
   files.forEach(file => {
     const imageData = {
       file,
@@ -481,19 +521,18 @@ function handleImageUpload(event) {
     selectedImages.value.push(imageData);
   });
   
+  showNotification('success', `Added ${files.length} image${files.length > 1 ? 's' : ''} successfully`, 'Images Added');
+  
   console.log('Selected images:', selectedImages.value.map(img => img.name));
   
-  // Clear the input
   if (fileInput.value) {
     fileInput.value.value = '';
   }
 }
 
-// UPDATED: Remove image function
 function removeImage(index) {
   const imageData = selectedImages.value[index];
   
-  // Clean up the preview URL
   if (imageData && imageData.preview) {
     URL.revokeObjectURL(imageData.preview);
   }
@@ -502,7 +541,6 @@ function removeImage(index) {
   console.log('Removed image at index', index, 'Remaining:', selectedImages.value.length);
 }
 
-// Simple computed property that just returns the selectedImages
 const imagePreviewData = computed(() => {
   return selectedImages.value.map((imageData, index) => ({
     ...imageData,
@@ -510,24 +548,20 @@ const imagePreviewData = computed(() => {
   }));
 });
 
-// UPDATED: Save recipe function
 async function saveRecipe() {
   if (!isFormValid.value) {
-    alert('Please fill in all required fields');
+    showNotification('warning', 'Please fill in all required fields to publish your recipe', 'Missing Information');
     return;
   }
 
   try {
     isSaving.value = true;
 
-    // Create FormData object for file upload
     const formData = new FormData();
     
-    // Add recipe data
     formData.append('name', recipeForm.value.title);
     formData.append('description', recipeForm.value.description);
     
-    // Convert ingredients and instructions to JSON strings
     const ingredients = recipeForm.value.ingredients
       .filter(ing => ing.name.trim() !== '')
       .map(ing => ({
@@ -549,7 +583,6 @@ async function saveRecipe() {
     formData.append('difficulty', recipeForm.value.difficulty);
     formData.append('rating', 5);
     
-    // Add additional fields if they exist
     if (recipeForm.value.servings) {
       formData.append('servings', recipeForm.value.servings);
     }
@@ -563,7 +596,6 @@ async function saveRecipe() {
       formData.append('notes', recipeForm.value.notes);
     }
     
-    // Add image files - UPDATED to use the file from imageData
     selectedImages.value.forEach((imageData) => {
       formData.append('images', imageData.file);
     });
@@ -573,7 +605,6 @@ async function saveRecipe() {
     console.log('Ingredients count:', ingredients.length);
     console.log('Instructions count:', instructions.length);
     
-    // Log FormData contents (for debugging)
     for (let pair of formData.entries()) {
       if (pair[1] instanceof File) {
         console.log(pair[0], 'FILE:', pair[1].name, pair[1].size, 'bytes');
@@ -586,7 +617,7 @@ async function saveRecipe() {
     
     console.log('Recipe created successfully:', response);
     
-    alert(`Recipe "${recipeForm.value.title}" created successfully!`);
+    showNotification('success', `"${recipeForm.value.title}" has been published successfully!`, 'Recipe Published 🎉');
     
     emit('recipe-created', response.recipe);
     
@@ -595,15 +626,13 @@ async function saveRecipe() {
 
   } catch (error) {
     console.error('Failed to create recipe:', error);
-    alert(`Failed to create recipe: ${error.message}`);
+    showNotification('error', `Failed to create recipe: ${error.message}`, 'Creation Failed');
   } finally {
     isSaving.value = false;
   }
 }
 
-// UPDATED: Reset form function
 function resetForm() {
-  // Clean up all preview URLs
   selectedImages.value.forEach(imageData => {
     if (imageData.preview) {
       URL.revokeObjectURL(imageData.preview);
@@ -624,10 +653,8 @@ function resetForm() {
     instructions: [{ Steps: '' }]
   };
   
-  // Clear selected images
   selectedImages.value = [];
   
-  // Clear file input
   if (fileInput.value) {
     fileInput.value.value = '';
   }
@@ -639,7 +666,6 @@ function goBack() {
   emit('go-home')
 }
 
-// Clean up URLs when component is unmounted
 onUnmounted(() => {
   selectedImages.value.forEach(imageData => {
     if (imageData.preview) {
@@ -1270,6 +1296,168 @@ onUnmounted(() => {
   background: var(--background-tertiary);
   color: var(--text-primary);
   transform: translateY(-2px);
+}
+
+/* Add this to your existing <style> section */
+
+/* ===== STYLED NOTIFICATIONS ===== */
+.notification-overlay {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.notification {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  background: var(--background-primary, white);
+  border-radius: var(--radius-xl, 16px);
+  box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.1));
+  border: 1px solid var(--background-tertiary, #e2e8f0);
+  position: relative;
+  overflow: hidden;
+  min-width: 320px;
+  max-width: 400px;
+  pointer-events: auto;
+  animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.notification::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--primary-color, #ff6b6b);
+}
+
+.notification-success {
+  background: linear-gradient(135deg, var(--background-primary, white) 0%, var(--success-light, #d1fae5) 100%);
+}
+
+.notification-success::before {
+  background: var(--success-color, #10b981);
+}
+
+.notification-error {
+  background: linear-gradient(135deg, var(--background-primary, white) 0%, #fee2e2 100%);
+}
+
+.notification-error::before {
+  background: var(--danger-color, #ef4444);
+}
+
+.notification-warning {
+  background: linear-gradient(135deg, var(--background-primary, white) 0%, #fef3c7 100%);
+}
+
+.notification-warning::before {
+  background: var(--warning-color, #f59e0b);
+}
+
+.notification-info {
+  background: linear-gradient(135deg, var(--background-primary, white) 0%, var(--primary-light, #ffe6e6) 100%);
+}
+
+.notification-info::before {
+  background: var(--primary-color, #ff6b6b);
+}
+
+.notification-icon {
+  font-size: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  animation: iconPulse 0.6s ease-out;
+}
+
+@keyframes iconPulse {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-weight: 600;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--text-primary, #2c3e50);
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.notification-message {
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--text-secondary, #5a6c7d);
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--text-muted, #8492a6);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm, 4px);
+  transition: all var(--transition-fast, 150ms ease-in-out);
+  flex-shrink: 0;
+  margin-top: -2px;
+}
+
+.notification-close:hover {
+  background: var(--background-tertiary, #e2e8f0);
+  color: var(--text-primary, #2c3e50);
+  transform: scale(1.1);
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .notification-overlay {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+  }
+  
+  .notification {
+    min-width: auto;
+    max-width: none;
+    padding: 14px 16px;
+  }
+  
+  .notification-title {
+    font-size: var(--font-size-xs, 0.75rem);
+  }
+  
+  .notification-message {
+    font-size: var(--font-size-xs, 0.75rem);
+  }
 }
 
 /* ===== RESPONSIVE DESIGN ===== */
