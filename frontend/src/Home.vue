@@ -320,21 +320,40 @@
                </div>
 
                <div class="filter-group">
-                 <h4>Rating</h4>
-                 <div class="rating-filter">
-                   <div v-for="rating in [5,4,3,2,1]" :key="rating" class="rating-option">
-                     <input 
-                       type="radio" 
-                       :value="rating" 
-                       v-model="minRating"
-                       @change="applyFilters"
-                       name="rating"
-                     />
-                     <span class="stars">{{ '★'.repeat(rating) }}{{ '☆'.repeat(5-rating) }}</span>
-                     <span>& up</span>
-                   </div>
-                 </div>
-               </div>
+                <h4>Rating</h4>
+                <div class="star-rating-filter">
+                  <div class="interactive-stars">
+                    <span 
+                      v-for="star in 5" 
+                      :key="star"
+                      class="star-interactive"
+                      :class="{ 
+                        'star-filled': star <= minRating, 
+                        'star-hover': star <= hoverRating 
+                      }"
+                      @click="selectRating(star)"
+                      @mouseenter="hoverRating = star"
+                      @mouseleave="hoverRating = 0"
+                    >
+                      ★
+                    </span>
+                    <button 
+                      v-if="minRating > 0" 
+                      class="clear-rating-btn" 
+                      @click="clearRating"
+                      title="Clear rating filter"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <span v-if="minRating > 0" class="rating-text">
+                    {{ minRating }} star{{ minRating > 1 ? 's' : '' }} & up
+                  </span>
+                  <span v-else class="rating-text">
+                    Click to filter by rating
+                  </span>
+                </div>
+              </div>
 
                <div class="filter-group">
                  <h4>Cook Time</h4>
@@ -379,6 +398,7 @@ function reinitializeIcons() {
 
 const API_BASE_URL = 'http://localhost:8080';
 
+const hoverRating = ref(0)
 const searchQuery = ref('')
 const activeSearchQuery = ref('') 
 const showFilters = ref(false) 
@@ -434,6 +454,18 @@ function showStyledConfirm(options) {
   showConfirmDialog.value = true
   
   reinitializeIcons();
+}
+
+function selectRating(rating) {
+  minRating.value = rating
+  applyFilters()
+}
+
+function clearRating() {
+  minRating.value = ''
+  hoverRating.value = 0
+  applyFilters()
+
 }
 
 function confirmAction() {
@@ -564,14 +596,15 @@ function closeError() {
   apiError.value = '';
 }
 
-function handleEditRecipe(recipe) {
-  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with recipe:', recipe)
+function handleEditRecipe(recipeId) {
+  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with ID:', recipeId)
+
   
   const recipeId = recipe.id || recipe._id
   
-  if (!recipeId) {
-    console.error('No recipe ID found:', recipe)
-    showNotification('error', 'Recipe ID not found. Cannot edit recipe.', 'Recipe Error');
+  if (!recipeToEditData) {
+    console.error('Recipe not found in local data:', recipeId)
+    showNotification('error', 'Recipe not found. It may have been deleted.', 'Recipe Not Found');
     return
   }
   
@@ -1064,6 +1097,10 @@ onMounted(() => {
  console.log('Home page loaded');
  document.addEventListener('click', handleClickOutside);
  checkAuthStatus();
+ 
+ // Initialize Lucide icons with longer delay
+
+
 
  setTimeout(() => {
    if (window.lucide) {
@@ -1072,6 +1109,7 @@ onMounted(() => {
    }
  }, 200);
  
+ // Reinitialize periodically for dynamic content
 
  setInterval(() => {
    if (window.lucide) {
@@ -1127,6 +1165,12 @@ defineExpose({
   width: 16px;
   height: 16px;
   color: var(--text-muted);
+  
+  transition: transform var(--transition-fast);
+}
+
+.profile-menu:hover .dropdown-arrow {
+  transform: rotate(180deg);
 }
 
 /* ===== NOTIFICATION & DIALOG ICONS ===== */
@@ -1149,6 +1193,540 @@ defineExpose({
   width: 48px;
   height: 48px;
   color: var(--primary-color);
+  margin-bottom: var(--space-4);
+}
+
+.error-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--danger-color);
+  margin-bottom: var(--space-6);
+}
+
+/* ===== BUTTON ICONS ===== */
+.btn-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  stroke-width: 2;
+}
+
+/* ===== SECTION HEADER ICONS ===== */
+.section-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--primary-color);
+  margin-right: 12px;
+  stroke-width: 2.5;
+}
+
+.time-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+  margin-right: 4px;
+  stroke-width: 2;
+}
+
+/* ===== HEART ICON (LIKE BUTTON) ===== */
+.heart-icon {
+  width: 20px;
+  height: 20px;
+  color: #ef4444;
+  transition: all 0.3s ease;
+  stroke-width: 2;
+}
+
+.heart-icon.heart-empty {
+  fill: none;
+  stroke: #ef4444;
+}
+
+.heart-icon.heart-filled {
+  fill: #ef4444;
+  stroke: #ef4444;
+}
+
+.like-btn:hover .heart-icon {
+  transform: scale(1.1);
+}
+
+/* ===== NO RESULTS ICON ===== */
+.no-results-icon {
+  width: 64px;
+  height: 64px;
+  color: var(--text-muted);
+  opacity: 0.6;
+  margin-bottom: var(--space-6);
+  stroke-width: 1.5;
+}
+
+/* ===== NOTIFICATION & DIALOG ICONS ===== */
+.notification-icon-lucide {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  animation: iconPulse 0.6s ease-out;
+}
+
+.confirm-icon-lucide {
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--space-6);
+  animation: bounce 0.6s ease-out;
+  color: var(--primary-color);
+}
+
+
+
+
+/* ===== LOADING & ERROR ICONS ===== */
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  color: var(--primary-color);
+  
+  animation: spin 1s linear infinite;
+  margin-bottom: var(--space-4);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.error-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--danger-color);
+  margin-bottom: var(--space-6);
+  animation: shake 0.6s ease-out;
+}
+
+/* ===== BUTTON ICONS ===== */
+.btn-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  stroke-width: 2;
+}
+
+/* ===== SECTION HEADER ICONS ===== */
+.section-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--primary-color);
+  margin-right: 12px;
+  stroke-width: 2.5;
+}
+
+.time-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+  margin-right: 4px;
+  stroke-width: 2;
+}
+
+/* ===== HEART ICON (LIKE BUTTON) ===== */
+.heart-icon {
+  width: 20px;
+  height: 20px;
+  color: #ef4444;
+  transition: all 0.3s ease;
+  stroke-width: 2;
+}
+
+.heart-icon.heart-empty {
+  fill: none;
+  stroke: #ef4444;
+}
+
+.heart-icon.heart-filled {
+  fill: #ef4444;
+  stroke: #ef4444;
+  animation: heartBeat 0.6s ease-out;
+}
+
+
+.like-btn:hover .heart-icon {
+  transform: scale(1.1);
+}
+
+/* ===== NO RESULTS ICON ===== */
+.no-results-icon {
+  width: 64px;
+  height: 64px;
+  color: var(--text-muted);
+  opacity: 0.6;
+  margin-bottom: var(--space-6);
+  stroke-width: 1.5;
+}
+
+/* ===== STYLED CONFIRMATION DIALOG ===== */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  animation: fadeIn 0.3s ease-out;
+}
+.star-rating-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.interactive-stars {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.star-interactive {
+  font-size: 24px;
+  color: #e5e7eb;
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.1s ease;
+  user-select: none;
+}
+
+.star-interactive:hover {
+  transform: scale(1.1);
+}
+
+.star-filled {
+  color: #fbbf24 !important;
+}
+
+.star-hover {
+  color: #fcd34d !important;
+}
+
+.clear-rating-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.clear-rating-btn:hover {
+  background: #dc2626;
+}
+
+.rating-text {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.confirm-modal {
+  background: var(--background-primary);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--background-tertiary);
+  max-width: 450px;
+  width: 90%;
+  text-align: center;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.confirm-title {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+
+.confirm-message {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: var(--space-8);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-danger {
+  padding: var(--space-3) var(--space-6);
+  background: linear-gradient(135deg, var(--danger-color), var(--danger-hover));
+  border: none;
+  border-radius: var(--radius-full);
+  color: white;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, var(--danger-hover), var(--danger-color));
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ===== STYLED NOTIFICATIONS ===== */
+.notification-overlay {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.notification {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  background: var(--background-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--background-tertiary);
+  position: relative;
+  overflow: hidden;
+  min-width: 320px;
+  max-width: 400px;
+  pointer-events: auto;
+
+}
+
+
+.notification::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--primary-color);
+}
+
+.notification-success {
+  background: linear-gradient(135deg, var(--background-primary) 0%, var(--success-light) 100%);
+}
+
+.notification-success::before {
+  background: var(--success-color);
+}
+
+.notification-error {
+  background: linear-gradient(135deg, var(--background-primary) 0%, #fee2e2 100%);
+}
+
+.notification-error::before {
+  background: var(--danger-color);
+}
+
+.notification-warning {
+  background: linear-gradient(135deg, var(--background-primary) 0%, #fef3c7 100%);
+}
+
+.notification-warning::before {
+  background: var(--warning-color);
+}
+
+.notification-info {
+  background: linear-gradient(135deg, var(--background-primary) 0%, var(--primary-light) 100%);
+}
+
+.notification-info::before {
+  background: var(--primary-color);
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.notification-message {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  margin-top: -2px;
+}
+
+.notification-close:hover {
+  background: var(--background-tertiary);
+  color: var(--text-primary);
+  transform: scale(1.1);
+}
+
+/* ===== ENHANCED LOADING OVERLAY ===== */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+}
+
+.loading-content {
+  text-align: center;
+  padding: var(--space-8);
+  background: var(--background-primary);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--background-tertiary);
+  animation: fadeInScale 0.3s ease-out;
+}
+
+
+.loading-text {
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ===== ENHANCED ERROR MODAL ===== */
+.error-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.error-modal {
+  background: var(--background-primary);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--background-tertiary);
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.error-title {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-4);
+}
+
+.error-message {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: var(--space-4);
+}
+
+.error-actions {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: var(--space-6);
+}
+
+.btn-primary {
+  padding: var(--space-3) var(--space-6);
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  border: none;
+  border-radius: var(--radius-full);
+  color: white;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--primary-hover), var(--primary-color));
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-secondary {
+  padding: var(--space-3) var(--space-6);
+  background: var(--background-secondary);
+  border: 2px solid var(--background-tertiary);
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn-secondary:hover {
+  background: var(--background-tertiary);
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+}
+
+/* ===== EXISTING STYLES (unchanged) ===== */
+=======
   margin-bottom: var(--space-4);
 }
 
@@ -1499,6 +2077,7 @@ defineExpose({
 }
 
 /* ===== EXISTING STYLES ===== */
+
 .profile-avatar img,
 .profile-avatar-large img {
   width: 100%;
@@ -1665,13 +2244,14 @@ body {
 }
 
 .no-search-results {
-  text-align: center;
-  padding: var(--space-16) var(--space-8);
-  background: var(--background-primary);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--background-tertiary);
-  margin-top: var(--space-8);
+ text-align: center;
+ padding: var(--space-16) var(--space-8);
+ background: var(--background-primary);
+ border-radius: var(--radius-2xl);
+ box-shadow: var(--shadow-lg);
+ border: 1px solid var(--background-tertiary);
+ margin-top: var(--space-8);
+
 }
 
 .no-search-results h3 {
@@ -1957,6 +2537,7 @@ body {
 .stars {
   color: #fbbf24;
   font-size: var(--font-size-lg);
+  margin-left:5px;
 }
 
 .cook-time {
@@ -2338,6 +2919,12 @@ body {
 .profile-menu:focus {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+  }
 }
 
 </style>
