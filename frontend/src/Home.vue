@@ -596,8 +596,8 @@ function closeError() {
   apiError.value = '';
 }
 
-function handleEditRecipe(recipeId) {
-  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with ID:', recipeId)
+function handleEditRecipe(recipe) {
+  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with ID:', recipe)
 
   
   const recipeId = recipe.id || recipe._id
@@ -1726,9 +1726,7 @@ defineExpose({
 }
 
 /* ===== EXISTING STYLES (unchanged) ===== */
-=======
-  margin-bottom: var(--space-4);
-}
+
 
 .error-icon {
   width: 48px;
