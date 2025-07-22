@@ -320,21 +320,40 @@
                </div>
 
                <div class="filter-group">
-                 <h4>Rating</h4>
-                 <div class="rating-filter">
-                   <div v-for="rating in [5,4,3,2,1]" :key="rating" class="rating-option">
-                     <input 
-                       type="radio" 
-                       :value="rating" 
-                       v-model="minRating"
-                       @change="applyFilters"
-                       name="rating"
-                     />
-                     <span class="stars">{{ '★'.repeat(rating) }}{{ '☆'.repeat(5-rating) }}</span>
-                     <span>& up</span>
-                   </div>
-                 </div>
-               </div>
+                <h4>Rating</h4>
+                <div class="star-rating-filter">
+                  <div class="interactive-stars">
+                    <span 
+                      v-for="star in 5" 
+                      :key="star"
+                      class="star-interactive"
+                      :class="{ 
+                        'star-filled': star <= minRating, 
+                        'star-hover': star <= hoverRating 
+                      }"
+                      @click="selectRating(star)"
+                      @mouseenter="hoverRating = star"
+                      @mouseleave="hoverRating = 0"
+                    >
+                      ★
+                    </span>
+                    <button 
+                      v-if="minRating > 0" 
+                      class="clear-rating-btn" 
+                      @click="clearRating"
+                      title="Clear rating filter"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <span v-if="minRating > 0" class="rating-text">
+                    {{ minRating }} star{{ minRating > 1 ? 's' : '' }} & up
+                  </span>
+                  <span v-else class="rating-text">
+                    Click to filter by rating
+                  </span>
+                </div>
+              </div>
 
                <div class="filter-group">
                  <h4>Cook Time</h4>
@@ -379,6 +398,7 @@ function reinitializeIcons() {
 
 const API_BASE_URL = 'http://localhost:8080';
 
+const hoverRating = ref(0)
 const searchQuery = ref('')
 const activeSearchQuery = ref('') 
 const showFilters = ref(false) 
@@ -434,6 +454,17 @@ function showStyledConfirm(options) {
   showConfirmDialog.value = true
   
   reinitializeIcons();
+}
+
+function selectRating(rating) {
+  minRating.value = rating
+  applyFilters()
+}
+
+function clearRating() {
+  minRating.value = ''
+  hoverRating.value = 0
+  applyFilters()
 }
 
 function confirmAction() {
@@ -1337,6 +1368,63 @@ defineExpose({
   z-index: 10001;
   animation: fadeIn 0.3s ease-out;
 }
+.star-rating-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.interactive-stars {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.star-interactive {
+  font-size: 24px;
+  color: #e5e7eb;
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.1s ease;
+  user-select: none;
+}
+
+.star-interactive:hover {
+  transform: scale(1.1);
+}
+
+.star-filled {
+  color: #fbbf24 !important;
+}
+
+.star-hover {
+  color: #fcd34d !important;
+}
+
+.clear-rating-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.clear-rating-btn:hover {
+  background: #dc2626;
+}
+
+.rating-text {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
 
 .confirm-modal {
   background: var(--background-primary);
@@ -2107,6 +2195,7 @@ body {
 .stars {
   color: #fbbf24;
   font-size: var(--font-size-lg);
+  margin-left:5px;
 }
 
 .cook-time {

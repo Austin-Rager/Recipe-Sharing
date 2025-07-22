@@ -47,9 +47,6 @@
             <div class="profile-details">
               <div class="profile-name-section">
                 <h1 class="profile-title">{{ currentUser.name || 'User Name' }}</h1>
-                <button class="edit-profile-btn" @click="toggleEditMode">
-                  {{ editMode ? 'Cancel' : 'Edit Profile' }}
-                </button>
               </div>
               
               <p class="profile-email">{{ currentUser.email || 'user@example.com' }}</p>
@@ -114,19 +111,6 @@
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-
-        <!-- bio section -->
-        <div class="profile-bio-section" v-if="!editMode">
-          <div class="bio-container">
-            <h2>About</h2>
-            <p class="bio-text" v-if="currentUser.bio">
-              {{ currentUser.bio }}
-            </p>
-            <p class="bio-placeholder" v-else>
-              No bio available. Click "Edit Profile" to add one!
-            </p>
           </div>
         </div>
 
@@ -595,6 +579,10 @@ async function performDeleteRecipe(recipe) {
   try {
     deleteLoading.value = recipeId;
     
+    // ADD THIS LINE - Call the API to actually delete from database
+    await api.deleteRecipe(recipeId);
+    
+    // Only update local state after successful API deletion
     myRecipes.value = myRecipes.value.filter(r => getRecipeId(r) !== recipeId);
     userStats.value.recipesCreated = myRecipes.value.length;
     
