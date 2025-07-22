@@ -598,6 +598,8 @@ function closeError() {
 
 function handleEditRecipe(recipe) {
   console.log('🚀 MAIN COMPONENT: handleEditRecipe called with ID:', recipe)
+function handleEditRecipe(recipe) {
+  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with ID:', recipe)
 
   
   const recipeId = recipe.id || recipe._id
@@ -1724,6 +1726,9 @@ defineExpose({
   border-color: var(--primary-color);
   transform: translateY(-2px);
 }
+
+/* ===== EXISTING STYLES (unchanged) ===== */
+
 
 .error-icon {
   width: 48px;
