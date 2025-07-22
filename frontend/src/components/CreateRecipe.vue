@@ -1295,6 +1295,7 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all var(--transition-fast);
   box-shadow: var(--shadow-md);
+  justify-self: center;
 }
 
 .upload-btn:hover {
