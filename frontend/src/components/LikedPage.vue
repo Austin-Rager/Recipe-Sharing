@@ -10,7 +10,7 @@
             placeholder="Search your liked recipes..." 
             v-model="searchQuery"
           />
-          <span class="search-icon">🔍</span>
+           <i data-lucide="search" class="search-icon"></i>
         </div>
       </div>
 
@@ -108,6 +108,15 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue'
+
+function reinitializeIcons() {
+  setTimeout(() => {
+    if (window.lucide) {
+      window.lucide.createIcons();
+      console.log('Icons reinitialized');
+    }
+  }, 50);
+}
 
 export default {
   name: 'LikedPage',
