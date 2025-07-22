@@ -3,7 +3,7 @@
     <!-- Styled Notification -->
     <div v-if="notification.show" class="notification-overlay">
       <div :class="['notification', `notification-${notification.type}`]">
-        <div class="notification-icon">{{ notification.icon }}</div>
+        <i :data-lucide="notification.icon" class="notification-icon-lucide"></i>
         <div class="notification-content">
           <div v-if="notification.title" class="notification-title">{{ notification.title }}</div>
           <div class="notification-message">{{ notification.message }}</div>
@@ -14,17 +14,17 @@
 
     <div class="create-recipe-container">
       <div class="page-header">
-        <button class="back-btn" @click="goBack">
-          ← Back to Home
-        </button>
         <h1 class="page-title">Create New Recipe</h1>
         <p class="page-subtitle">Share your culinary creation with the FlavorCraft community</p>
       </div>
 
-      <!-- recipef form -->
+      <!-- recipe form -->
       <form @submit.prevent="saveRecipe" class="recipe-form">
         <div class="form-section">
-          <h2 class="section-title">Basic Information</h2>
+          <h2 class="section-title">
+            <i data-lucide="info" class="section-icon"></i>
+            Basic Information
+          </h2>
           
           <div class="form-row">
             <div class="form-group full-width">
@@ -98,70 +98,76 @@
         </div>
 
         <!-- image -->
-<div class="form-section">
-  <h2 class="section-title">Recipe Images</h2>
-  
-  <div class="image-upload-section">
-    <!-- Upload Button Area (always visible when under 5 images) -->
-    <div class="image-upload" v-if="selectedImages.length < 5">
-      <div class="upload-placeholder" @click="triggerFileInput">
-        <span class="upload-icon">📷</span>
-        <p v-if="selectedImages.length === 0">Add delicious photos of your recipe</p>
-        <p v-else>Add more images ({{ selectedImages.length }}/5)</p>
-        <button type="button" class="upload-btn">
-          Choose Image Files
-        </button>
-        <p class="upload-help">JPG, PNG, or WebP • Max 5MB each • Up to 5 images</p>
-        <input 
-          ref="fileInput"
-          type="file" 
-          @change="handleImageUpload"
-          accept="image/*"
-          multiple
-          class="file-input-hidden"
-        />
-      </div>
-    </div>
-    
-    <!-- Show when limit reached -->
-    <div v-if="selectedImages.length >= 5" class="upload-limit-message">
-      <p>Maximum of 5 images reached</p>
-      <button type="button" class="btn-secondary small" @click="removeImage(selectedImages.length - 1)">
-        Remove Last Image
-      </button>
-    </div>
-  </div>
-  
-  <!-- Image Preview Grid (separate section) -->
-  <div class="image-preview-section" v-if="selectedImages.length > 0">
-    <h3 class="preview-title">Selected Images ({{ selectedImages.length }}/5)</h3>
-    <div class="image-preview-grid">
-      <div 
-        v-for="(imageData, index) in imagePreviewData" 
-        :key="index"
-        class="image-preview-item"
-      >
-        <img :src="imageData.preview" :alt="imageData.name" />
-        <button 
-          type="button" 
-          class="remove-image-btn" 
-          @click="removeImage(index)"
-          title="Remove image"
-        >
-          ✕
-        </button>
-        <div class="image-info">
-          <p class="image-name">{{ imageData.name }}</p>
-          <p class="image-size">{{ Math.round(imageData.size / 1024) }} KB</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-     
         <div class="form-section">
-          <h2 class="section-title">Ingredients</h2>
+          <h2 class="section-title">
+            <i data-lucide="image" class="section-icon"></i>
+            Recipe Images
+          </h2>
+          
+          <div class="image-upload-section">
+            <!-- Upload Button Area (always visible when under 5 images) -->
+            <div class="image-upload" v-if="selectedImages.length < 5">
+              <div class="upload-placeholder" @click="triggerFileInput">
+                <i data-lucide="camera" class="upload-icon-lucide"></i>
+                <p v-if="selectedImages.length === 0">Add delicious photos of your recipe</p>
+                <p v-else>Add more images ({{ selectedImages.length }}/5)</p>
+                <button type="button" class="upload-btn">
+                  Choose Image Files
+                </button>
+                <p class="upload-help">JPG, PNG, or WebP • Max 5MB each • Up to 5 images</p>
+                <input 
+                  ref="fileInput"
+                  type="file" 
+                  @change="handleImageUpload"
+                  accept="image/*"
+                  multiple
+                  class="file-input-hidden"
+                />
+              </div>
+            </div>
+            
+            <!-- Show when limit reached -->
+            <div v-if="selectedImages.length >= 5" class="upload-limit-message">
+              <i data-lucide="alert-circle" class="limit-icon"></i>
+              <p>Maximum of 5 images reached</p>
+              <button type="button" class="btn-secondary small" @click="removeImage(selectedImages.length - 1)">
+                Remove Last Image
+              </button>
+            </div>
+          </div>
+          
+          <!-- Image Preview Grid (separate section) -->
+          <div class="image-preview-section" v-if="selectedImages.length > 0">
+            <h3 class="preview-title">Selected Images ({{ selectedImages.length }}/5)</h3>
+            <div class="image-preview-grid">
+              <div 
+                v-for="(imageData, index) in imagePreviewData" 
+                :key="index"
+                class="image-preview-item"
+              >
+                <img :src="imageData.preview" :alt="imageData.name" />
+                <button 
+                  type="button" 
+                  class="remove-image-btn" 
+                  @click="removeImage(index)"
+                  title="Remove image"
+                >
+                  <i data-lucide="x" class="remove-icon"></i>
+                </button>
+                <div class="image-info">
+                  <p class="image-name">{{ imageData.name }}</p>
+                  <p class="image-size">{{ Math.round(imageData.size / 1024) }} KB</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h2 class="section-title">
+            <i data-lucide="list-ordered" class="section-icon"></i>
+            Ingredients
+          </h2>
           
           <div class="ingredients-list">
             <div 
@@ -210,19 +216,22 @@
                 @click="removeIngredient(index)"
                 v-if="recipeForm.ingredients.length > 1"
               >
-                ✕
+                <i data-lucide="minus" class="remove-icon"></i>
               </button>
             </div>
           </div>
           
           <button type="button" class="add-ingredient-btn" @click="addIngredient">
-            + Add Ingredient
+            <i data-lucide="plus" class="add-icon"></i>
+            Add Ingredient
           </button>
         </div>
 
-      
         <div class="form-section">
-          <h2 class="section-title">Cooking Instructions</h2>
+          <h2 class="section-title">
+            <i data-lucide="list-ordered" class="section-icon"></i>
+            Cooking Instructions
+          </h2>
           
           <div class="instructions-list">
             <div 
@@ -246,19 +255,22 @@
                 @click="removeInstruction(index)"
                 v-if="recipeForm.instructions.length > 1"
               >
-                ✕
+                <i data-lucide="minus" class="remove-icon"></i>
               </button>
             </div>
           </div>
           
           <button type="button" class="add-step-btn" @click="addInstruction">
-            + Add Step
+            <i data-lucide="plus" class="add-icon"></i>
+            Add Step
           </button>
         </div>
 
-
         <div class="form-section">
-          <h2 class="section-title">Categories</h2>
+          <h2 class="section-title">
+            <i data-lucide="tags" class="section-icon"></i>
+            Categories
+          </h2>
           
           <div class="form-row">
             <div class="form-group">
@@ -292,9 +304,11 @@
           </div>
         </div>
 
-   
         <div class="form-section">
-          <h2 class="section-title">Chef's Notes (Optional)</h2>
+          <h2 class="section-title">
+            <i data-lucide="sticky-note" class="section-icon"></i>
+            Chef's Notes (Optional)
+          </h2>
           
           <div class="form-group">
             <label for="notes">Additional Tips & Notes</label>
@@ -311,9 +325,13 @@
 
         <div class="form-actions">
           <button type="button" class="btn-secondary" @click="goBack">
+            <i data-lucide="x" class="btn-icon"></i>
             Cancel
           </button>
           <button type="submit" class="btn-primary" :disabled="!isFormValid || isSaving">
+            <i :data-lucide="isSaving ? 'loader-2' : (isFormValid ? 'send' : 'alert-circle')" 
+               :class="{ 'spinning': isSaving }" 
+               class="btn-icon"></i>
             {{ isSaving ? 'Publishing...' : (isFormValid ? 'Publish Recipe' : 'Fill Required Fields') }}
           </button>
         </div>
@@ -323,11 +341,21 @@
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const API_BASE_URL = 'http://localhost:8080';
 
 const emit = defineEmits(['go-home', 'recipe-created'])
+
+// Helper function to reinitialize Lucide icons
+function reinitializeIcons() {
+  setTimeout(() => {
+    if (window.lucide) {
+      window.lucide.createIcons();
+      console.log('CreateRecipe: Icons reinitialized');
+    }
+  }, 50);
+}
 
 const fileInput = ref(null)
 const isSaving = ref(false)
@@ -343,10 +371,10 @@ const notification = ref({
 
 function showNotification(type, message, title = '') {
   const iconMap = {
-    success: '✅',
-    error: '⚠️',
-    warning: '⚠️',
-    info: 'ℹ️'
+    success: 'check-circle',
+    error: 'alert-triangle',
+    warning: 'alert-triangle',
+    info: 'info'
   }
   
   notification.value = {
@@ -354,8 +382,11 @@ function showNotification(type, message, title = '') {
     type,
     title,
     message,
-    icon: iconMap[type] || '🍳'
+    icon: iconMap[type] || 'chef-hat'
   }
+  
+
+  reinitializeIcons();
   
   setTimeout(() => {
     hideNotification()
@@ -456,21 +487,25 @@ const isFormValid = computed(() => {
 
 function addIngredient() {
   recipeForm.value.ingredients.push({ quantity: '', unit: '', name: '' })
+  reinitializeIcons();
 }
 
 function removeIngredient(index) {
   if (recipeForm.value.ingredients.length > 1) {
     recipeForm.value.ingredients.splice(index, 1)
+    reinitializeIcons();
   }
 }
 
 function addInstruction() {
   recipeForm.value.instructions.push({ Steps: '' })
+  reinitializeIcons();
 }
 
 function removeInstruction(index) {
   if (recipeForm.value.instructions.length > 1) {
     recipeForm.value.instructions.splice(index, 1)
+    reinitializeIcons();
   }
 }
 
@@ -528,6 +563,8 @@ function handleImageUpload(event) {
   if (fileInput.value) {
     fileInput.value.value = '';
   }
+
+  reinitializeIcons();
 }
 
 function removeImage(index) {
@@ -539,6 +576,8 @@ function removeImage(index) {
   
   selectedImages.value.splice(index, 1);
   console.log('Removed image at index', index, 'Remaining:', selectedImages.value.length);
+
+  reinitializeIcons();
 }
 
 const imagePreviewData = computed(() => {
@@ -556,6 +595,9 @@ async function saveRecipe() {
 
   try {
     isSaving.value = true;
+    
+
+    reinitializeIcons();
 
     const formData = new FormData();
     
@@ -617,7 +659,7 @@ async function saveRecipe() {
     
     console.log('Recipe created successfully:', response);
     
-    showNotification('success', `"${recipeForm.value.title}" has been published successfully!`, 'Recipe Published 🎉');
+    showNotification('success', `"${recipeForm.value.title}" has been published successfully!`, 'Recipe Published');
     
     emit('recipe-created', response.recipe);
     
@@ -629,6 +671,7 @@ async function saveRecipe() {
     showNotification('error', `Failed to create recipe: ${error.message}`, 'Creation Failed');
   } finally {
     isSaving.value = false;
+    reinitializeIcons();
   }
 }
 
@@ -666,6 +709,18 @@ function goBack() {
   emit('go-home')
 }
 
+onMounted(() => {
+  console.log('CreateRecipe component mounted');
+  
+  //init lucide icons
+  setTimeout(() => {
+    if (window.lucide) {
+      window.lucide.createIcons();
+      console.log('CreateRecipe: Initial icons loaded');
+    }
+  }, 200);
+});
+
 onUnmounted(() => {
   selectedImages.value.forEach(imageData => {
     if (imageData.preview) {
@@ -676,6 +731,172 @@ onUnmounted(() => {
 </script>
 
 <style>
+
+
+/* ===== ADD THESE LUCIDE ICON STYLES TO YOUR EXISTING CSS ===== */
+
+/* ===== LUCIDE ICON BASE STYLES ===== */
+[data-lucide] {
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ===== NAVIGATION & BUTTON ICONS ===== */
+.back-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+}
+
+.btn-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  stroke-width: 2;
+}
+
+.btn-icon.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ===== SECTION HEADER ICONS ===== */
+.section-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--primary-color);
+  margin-right: 12px;
+  stroke-width: 2.5;
+  flex-shrink: 0;
+}
+
+/* ===== UPLOAD & IMAGE ICONS ===== */
+.upload-icon-lucide {
+  width: 48px;
+  height: 48px;
+  color: var(--primary-color);
+  margin-bottom: 16px;
+  stroke-width: 1.5;
+}
+
+.limit-icon {
+  width: 20px;
+  height: 20px;
+  color: #856404;
+  margin-right: 8px;
+  stroke-width: 2;
+}
+
+.remove-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.5;
+}
+
+/* ===== ADD/REMOVE ACTION ICONS ===== */
+.add-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  stroke-width: 2.5;
+}
+
+/* ===== NOTIFICATION ICONS ===== */
+.notification-icon-lucide {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ===== REMOVE THE OLD EMOJI-BASED NOTIFICATION ICON ANIMATION ===== */
+/* Replace this in your existing CSS: */
+.notification-icon {
+  font-size: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  /* REMOVE: animation: iconPulse 0.6s ease-out; */
+}
+
+/* ===== ALSO REMOVE THIS ANIMATION FROM YOUR CSS ===== */
+/*
+@keyframes iconPulse {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+*/
+
+/* ===== ENHANCED BUTTON STYLING FOR ICONS ===== */
+.upload-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.add-ingredient-btn,
+.add-step-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.remove-ingredient-btn,
+.remove-step-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== RESPONSIVE ICON SIZING ===== */
+@media (max-width: 768px) {
+  .section-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+  }
+  
+  .upload-icon-lucide {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .btn-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .section-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 6px;
+  }
+  
+  .upload-icon-lucide {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .back-icon,
+  .btn-icon {
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+  }
+}
+
 /* ===== CREATE RECIPE PAGE STYLES ===== */
 .create-recipe-page {
   min-height: 100vh;
@@ -1383,19 +1604,6 @@ onUnmounted(() => {
   font-size: 20px;
   margin-top: 2px;
   flex-shrink: 0;
-  animation: iconPulse 0.6s ease-out;
-}
-
-@keyframes iconPulse {
-  0% {
-    transform: scale(0);
-  }
-  50% {
-    transform: scale(1.2);
-  }
-  100% {
-    transform: scale(1);
-  }
 }
 
 .notification-content {

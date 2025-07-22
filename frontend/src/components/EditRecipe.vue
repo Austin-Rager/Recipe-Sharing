@@ -2,23 +2,23 @@
   <div class="edit-recipe-page">
     <div class="edit-recipe-container">
       <div class="page-header">
-        <button class="back-btn" @click="goBack">
-          ← Back to Home
-        </button>
         <h1 class="page-title">Edit Recipe</h1>
         <p class="page-subtitle">Update your culinary creation</p>
       </div>
 
-      
+      <!-- Loading State -->
       <div v-if="isLoading" class="loading-container">
-        <div class="loading-spinner">⟳</div>
+        <i data-lucide="loader-2" class="loading-spinner"></i>
         <p>Loading recipe...</p>
       </div>
 
-    
+      <!-- Recipe Form -->
       <form v-else @submit.prevent="updateRecipe" class="recipe-form">
         <div class="form-section">
-          <h2 class="section-title">Basic Information</h2>
+          <h2 class="section-title">
+            <i data-lucide="info" class="section-icon"></i>
+            Basic Information
+          </h2>
           
           <div class="form-row">
             <div class="form-group full-width">
@@ -89,21 +89,24 @@
           </div>
         </div>
 
-
+        <!-- Recipe Image -->
         <div class="form-section">
-          <h2 class="section-title">Recipe Image</h2>
+          <h2 class="section-title">
+            <i data-lucide="image" class="section-icon"></i>
+            Recipe Image
+          </h2>
           
           <div class="image-upload-section">
             <div class="image-preview" v-if="recipeForm.imageUrl">
               <img :src="recipeForm.imageUrl" alt="Recipe preview" />
               <button type="button" class="remove-image-btn" @click="removeImage">
-                ✕
+                <i data-lucide="x" class="remove-icon"></i>
               </button>
             </div>
             
             <div class="image-upload" v-else>
               <div class="upload-placeholder" @click="triggerFileInput">
-                <span class="upload-icon">📷</span>
+                <i data-lucide="camera" class="upload-icon-lucide"></i>
                 <p>Add a delicious photo of your recipe</p>
                 <button type="button" class="upload-btn">
                   Choose Image File
@@ -121,9 +124,12 @@
           </div>
         </div>
 
-   
+        <!-- Ingredients -->
         <div class="form-section">
-          <h2 class="section-title">Ingredients</h2>
+          <h2 class="section-title">
+            <i data-lucide="shopping-list" class="section-icon"></i>
+            Ingredients
+          </h2>
           
           <div class="ingredients-list">
             <div 
@@ -169,19 +175,23 @@
                 @click="removeIngredient(index)"
                 v-if="recipeForm.ingredients.length > 1"
               >
-                ✕
+                <i data-lucide="minus" class="remove-icon"></i>
               </button>
             </div>
           </div>
           
           <button type="button" class="add-ingredient-btn" @click="addIngredient">
-            + Add Ingredient
+            <i data-lucide="plus" class="add-icon"></i>
+            Add Ingredient
           </button>
         </div>
 
- 
+        <!-- Cooking Instructions -->
         <div class="form-section">
-          <h2 class="section-title">Cooking Instructions</h2>
+          <h2 class="section-title">
+            <i data-lucide="list-ordered" class="section-icon"></i>
+            Cooking Instructions
+          </h2>
           
           <div class="instructions-list">
             <div 
@@ -205,19 +215,23 @@
                 @click="removeInstruction(index)"
                 v-if="recipeForm.instructions.length > 1"
               >
-                ✕
+                <i data-lucide="minus" class="remove-icon"></i>
               </button>
             </div>
           </div>
           
           <button type="button" class="add-step-btn" @click="addInstruction">
-            + Add Step
+            <i data-lucide="plus" class="add-icon"></i>
+            Add Step
           </button>
         </div>
 
-        
+        <!-- Categories -->
         <div class="form-section">
-          <h2 class="section-title">Categories</h2>
+          <h2 class="section-title">
+            <i data-lucide="tags" class="section-icon"></i>
+            Categories
+          </h2>
           
           <div class="form-row">
             <div class="form-group">
@@ -251,9 +265,12 @@
           </div>
         </div>
 
-
+        <!-- Chef's Notes -->
         <div class="form-section">
-          <h2 class="section-title">Chef's Notes (Optional)</h2>
+          <h2 class="section-title">
+            <i data-lucide="sticky-note" class="section-icon"></i>
+            Chef's Notes (Optional)
+          </h2>
           
           <div class="form-group">
             <label for="notes">Additional Tips & Notes</label>
@@ -270,12 +287,17 @@
 
         <div class="form-actions">
           <button type="button" class="btn-secondary" @click="goBack">
+            <i data-lucide="x" class="btn-icon"></i>
             Cancel
           </button>
           <button type="button" class="btn-danger" @click="deleteRecipe" v-if="recipeId">
+            <i data-lucide="trash-2" class="btn-icon"></i>
             Delete Recipe
           </button>
           <button type="submit" class="btn-primary" :disabled="!isFormValid || isSaving">
+            <i :data-lucide="isSaving ? 'loader-2' : (isFormValid ? 'save' : 'alert-circle')" 
+               :class="{ 'spinning': isSaving }" 
+               class="btn-icon"></i>
             {{ isSaving ? 'Updating...' : (isFormValid ? 'Update Recipe' : 'Fill Required Fields') }}
           </button>
         </div>
@@ -297,6 +319,16 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['go-home', 'recipe-updated', 'recipe-deleted'])
+
+// Helper function to reinitialize Lucide icons
+function reinitializeIcons() {
+  setTimeout(() => {
+    if (window.lucide) {
+      window.lucide.createIcons();
+      console.log('EditRecipe: Icons reinitialized');
+    }
+  }, 50);
+}
 
 const fileInput = ref(null)
 const isSaving = ref(false)
@@ -423,31 +455,44 @@ onMounted(async () => {
     goBack();
   } finally {
     isLoading.value = false;
+    
+    // Initialize Lucide icons after loading
+    setTimeout(() => {
+      if (window.lucide) {
+        window.lucide.createIcons();
+        console.log('EditRecipe: Initial icons loaded');
+      }
+    }, 200);
   }
 });
 
 function addIngredient() {
   recipeForm.value.ingredients.push({ quantity: '', unit: '', name: '' })
+  reinitializeIcons();
 }
 
 function removeIngredient(index) {
   if (recipeForm.value.ingredients.length > 1) {
     recipeForm.value.ingredients.splice(index, 1)
+    reinitializeIcons();
   }
 }
 
 function addInstruction() {
   recipeForm.value.instructions.push({ Steps: '' })
+  reinitializeIcons();
 }
 
 function removeInstruction(index) {
   if (recipeForm.value.instructions.length > 1) {
     recipeForm.value.instructions.splice(index, 1)
+    reinitializeIcons();
   }
 }
 
 function removeImage() {
   recipeForm.value.imageUrl = ''
+  reinitializeIcons();
 }
 
 function triggerFileInput() {
@@ -472,6 +517,7 @@ function handleImageUpload(event) {
   const reader = new FileReader()
   reader.onload = (e) => {
     recipeForm.value.imageUrl = e.target.result
+    reinitializeIcons();
   }
   reader.onerror = () => {
     alert('Error reading the image file. Please try again.')
@@ -487,6 +533,9 @@ async function updateRecipe() {
 
   try {
     isSaving.value = true;
+    
+    // Reinitialize icons to show loading state
+    reinitializeIcons();
 
     const backendRecipeData = {
       name: recipeForm.value.title,
@@ -525,6 +574,8 @@ async function updateRecipe() {
     alert(`Failed to update recipe: ${error.message}`);
   } finally {
     isSaving.value = false;
+    // Reinitialize icons after saving is complete
+    reinitializeIcons();
   }
 }
 
@@ -535,6 +586,9 @@ async function deleteRecipe() {
 
   try {
     isSaving.value = true;
+    
+    // Reinitialize icons to show loading state
+    reinitializeIcons();
     
     await api.deleteRecipe(props.recipeId);
     
@@ -548,6 +602,7 @@ async function deleteRecipe() {
     alert(`Failed to delete recipe: ${error.message}`);
   } finally {
     isSaving.value = false;
+    reinitializeIcons();
   }
 }
 

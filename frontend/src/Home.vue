@@ -1,6 +1,6 @@
 <template>
  <div class="home-page">
-
+<!-- FIX HEART FULL -->
    <div v-if="showConfirmDialog" class="confirm-overlay" @click.self="cancelConfirm">
      <div class="confirm-modal">
        <i :data-lucide="confirmDialog.icon" class="confirm-icon-lucide"></i>
@@ -446,6 +446,8 @@ function confirmAction() {
 function cancelConfirm() {
   showConfirmDialog.value = false
 }
+
+
 
 function showNotification(type, message, title = '') {
   const iconMap = {
