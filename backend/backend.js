@@ -213,16 +213,19 @@ app.post("/recipe", createRecipeLimiter, upload.array('images', 5), async (req, 
     }
 
     // AI validation step
-    let aiValidationPassed = true;
     try {
         const verdict = await validateRecipeAI(data.name, ingredients);
 
         if (!verdict || !verdict.includes("This recipe looks good.")) {
-            aiValidationPassed = false;
             console.warn("AI validation failed:", verdict);
+            return res.status(400).json({
+                error: "AI validation failed",
+                message: verdict
+            });
         }
     } catch (error) {
         console.warn("AI validation skipped due to error:", error.message);
+        return res.status(500).json({ error: "AI validation error", message: error.message });
     }
 
     try {
@@ -329,6 +332,7 @@ app.post("/recipe/:id/like", async (req, res) => {
         res.status(500).json({ error: "Failed to like recipe" });
     }
 });
+
 
 // Unlike a recipe
 app.delete("/recipe/:id/like", async (req, res) => {

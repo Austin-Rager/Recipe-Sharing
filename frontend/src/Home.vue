@@ -602,7 +602,7 @@ function handleEditRecipe(recipe) {
   
   const recipeId = recipe.id || recipe._id
   
-  if (!recipeToEditData) {
+  if (!recipeToEdit) {
     console.error('Recipe not found in local data:', recipeId)
     showNotification('error', 'Recipe not found. It may have been deleted.', 'Recipe Not Found');
     return
