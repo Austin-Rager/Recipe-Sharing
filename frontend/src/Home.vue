@@ -594,8 +594,8 @@ function closeError() {
   apiError.value = '';
 }
 
-function handleEditRecipe(recipeId) {
-  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with ID:', recipeId)
+function handleEditRecipe(recipe) {
+  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with ID:', recipe)
 
   
   const recipeId = recipe.id || recipe._id
@@ -1721,11 +1721,6 @@ defineExpose({
   background: var(--background-tertiary);
   border-color: var(--primary-color);
   transform: translateY(-2px);
-}
-
-/* ===== EXISTING STYLES (unchanged) ===== */
-=======
-  margin-bottom: var(--space-4);
 }
 
 .error-icon {

@@ -72,25 +72,23 @@ const upload = multer({
 });
 
 async function validateRecipeAI(name, ingredients) {
-  const prompt = `
-You are a helpful assistant that verifies if the recipe is valid and realistic.
+    const response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+            {
+                role: "system",
+                content: "You're a strict recipe validator. Reject any ingredient that is not edible or appropriate for human consumption."
+            },
+            {
+                role: "user",
+                content: `Is this recipe safe and reasonable?\nName: ${name}\nIngredients: ${JSON.stringify(ingredients)}\nReturn ONLY: "This recipe looks good." if all ingredients are appropriate. Otherwise explain what is wrong.`
+            }
+        ]
+    });
 
-Recipe name: "${name}"
-Ingredients: ${JSON.stringify(ingredients)}
-
-Please check if these ingredients make sense together for a real recipe.
-If something is unusual or not edible, say which ingredient and explain why.
-If all ingredients are fine, say: "This recipe looks good."
-  `;
-
-  const resp = await openai.chat.completions.create({
-    model: MODEL,
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0
-  });
-
-  return resp.choices[0].message.content.trim();
+    return response.choices[0].message.content;
 }
+
 
 const createRecipeLimiter = rateLimit({
   windowMs: 60 * 1000, 
