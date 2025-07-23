@@ -1727,9 +1727,6 @@ defineExpose({
   transform: translateY(-2px);
 }
 
-/* ===== EXISTING STYLES (unchanged) ===== */
-
-
 .error-icon {
   width: 48px;
   height: 48px;
