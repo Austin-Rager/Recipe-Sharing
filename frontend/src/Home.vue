@@ -167,7 +167,8 @@
           v-else-if="showProfile && isLoggedIn" 
           @go-home="goToHome" 
           @go-to-create="goToCreateRecipe"
-          @go-to-edit="handleEditRecipe"  
+          @go-to-edit="handleEditRecipe"
+          @go-to-recipe="openRecipe"
         />
 
        <MyRecipesPage 
@@ -618,12 +619,20 @@ function closeError() {
 function handleEditRecipe(recipe) {
   console.log('🚀 MAIN COMPONENT: handleEditRecipe called with ID:', recipe);
 
+<<<<<<< HEAD
   const recipeId = recipe.id || recipe._id;
 
   // Check if the recipe exists in apiRecipes
   const recipeExists = apiRecipes.value.find(r => getRecipeId(r) === recipeId);
   if (!recipeExists) {
     console.error('Recipe not found in local data:', recipeId);
+=======
+  
+  const recipeId = recipe.id || recipe._id
+  
+  if (!recipeToEdit) {
+    console.error('Recipe not found in local data:', recipeId)
+>>>>>>> 3c482ea2320bbb4649b95537fd065794d001c5b6
     showNotification('error', 'Recipe not found. It may have been deleted.', 'Recipe Not Found');
     return;
   }
