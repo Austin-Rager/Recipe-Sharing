@@ -49,7 +49,7 @@
 
     <!-- no liked recipes -->
     <div class="empty-state" v-if="!loading && likedRecipes.length === 0">
-      <div class="empty-icon">💔</div>
+      <i data-lucide="heart-off" class="empty-icon"></i>
       <h2>No liked recipes yet</h2>
       <p>Start exploring recipes!</p>
       <button class="explore-btn" @click="goToHome">
@@ -72,7 +72,7 @@
             :disabled="unlikeLoading === getRecipeId(recipe)"
             @click.stop="toggleLike(recipe)"
           >
-            {{ unlikeLoading === getRecipeId(recipe) ? '⏳' : '❤️' }}
+            <i :data-lucide="unlikeLoading === getRecipeId(recipe) ? 'clock' : 'heart'" class="heart-icon"></i>
           </button>
         </div>
         <div class="card-content">
@@ -87,7 +87,7 @@
             </span>
           </div>
           <div class="recipe-stats">
-            <span class="cook-time">⏱️ {{ getRecipeTime(recipe) }}</span>
+            <span class="cook-time"><i data-lucide="clock" class="time-icon"></i> {{ getRecipeTime(recipe) }}</span>
             <span class="liked-date">Liked {{ formatLikedDate(recipe.likedAt) }}</span>
           </div>
         </div>
@@ -96,7 +96,7 @@
 
     <!-- no results -->
     <div class="no-results" v-if="likedRecipes.length > 0 && filteredLikedRecipes.length === 0">
-      <div class="no-results-icon">🔍</div>
+      <i data-lucide="search" class="no-results-icon"></i>
       <h3>No recipes found</h3>
       <p>Try Again</p>
       <button class="clear-filters-btn" @click="clearFilters">
@@ -122,15 +122,13 @@ export default {
   name: 'LikedPage',
   emits: ['go-home', 'open-recipe'],
   setup(props, { emit }) {
-
     const API_BASE_URL = 'http://localhost:8080';
     
     const likedRecipes = ref([])
     const loading = ref(true)
     const searchQuery = ref('')
     const selectedDifficulty = ref('')
-    const unlikeLoading = ref(null) 
-
+    const unlikeLoading = ref(null)
 
     const api = {
       async request(endpoint, options = {}) {
@@ -202,7 +200,6 @@ export default {
       return map[difficultyNumber] || 'Easy';
     }
 
-   
     function getRecipeId(recipe) {
       return recipe.id || recipe._id;
     }
@@ -241,7 +238,6 @@ export default {
       return 'Easy';
     }
 
-    //filters
     const filteredLikedRecipes = computed(() => {
       let filtered = likedRecipes.value
 
@@ -259,59 +255,59 @@ export default {
         )
       }
 
+      reinitializeIcons();
       return filtered
     })
 
-    
     const loadLikedRecipes = async () => {
       try {
         loading.value = true 
         const response = await api.getLikedRecipes();
         likedRecipes.value = response.likedRecipes.map(convertBackendRecipe);
         console.log('Loaded liked recipes:', likedRecipes.value.length);
+        reinitializeIcons();
       } catch (error) {
         console.error('Failed to load liked recipes:', error);
-        
         if (error.message.includes('Must be logged in') || error.message.includes('401')) {
           likedRecipes.value = [];
         }
       } finally {
         loading.value = false 
+        reinitializeIcons();
       }
     }
 
- 
     const toggleLike = async (recipe) => {
       const recipeId = getRecipeId(recipe);
-      
       try {
         unlikeLoading.value = recipeId; 
-        
         await api.unlikeRecipe(recipeId);
-        
-      
         likedRecipes.value = likedRecipes.value.filter(r => getRecipeId(r) !== recipeId);
-        
         console.log('Recipe unliked:', getRecipeTitle(recipe));
+        reinitializeIcons();
       } catch (error) {
         console.error('Failed to unlike recipe:', error);
         alert('Failed to unlike recipe. Please try again.');
       } finally {
         unlikeLoading.value = null;
+        reinitializeIcons();
       }
     }
 
     const openRecipe = (recipe) => {
       emit('open-recipe', recipe)
+      reinitializeIcons();
     }
 
     const goToHome = () => {
       emit('go-home')
+      reinitializeIcons();
     }
 
     const clearFilters = () => {
       searchQuery.value = ''
       selectedDifficulty.value = ''
+      reinitializeIcons();
     }
 
     const formatLikedDate = (dateString) => {
@@ -334,6 +330,7 @@ export default {
 
     onMounted(() => {
       loadLikedRecipes()
+      reinitializeIcons();
     })
 
     return {
@@ -348,7 +345,6 @@ export default {
       goToHome,
       clearFilters,
       formatLikedDate,
-      //recipe getters
       getRecipeId,
       getRecipeTitle,
       getRecipeImage,

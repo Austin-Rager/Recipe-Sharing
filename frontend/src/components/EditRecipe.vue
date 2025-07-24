@@ -1,5 +1,17 @@
 <template>
   <div class="edit-recipe-page">
+    <!-- Notification Overlay -->
+    <div v-if="notification.show" class="notification-overlay">
+      <div :class="['notification', `notification-${notification.type}`]">
+        <i :data-lucide="notification.icon" class="notification-icon-lucide"></i>
+        <div class="notification-content">
+          <div v-if="notification.title" class="notification-title">{{ notification.title }}</div>
+          <div class="notification-message">{{ notification.message }}</div>
+        </div>
+        <button class="notification-close" @click="hideNotification">✕</button>
+      </div>
+    </div>
+
     <div class="edit-recipe-container">
       <div class="page-header">
         <h1 class="page-title">Edit Recipe</h1>
@@ -333,6 +345,40 @@ function reinitializeIcons() {
 const fileInput = ref(null)
 const isSaving = ref(false)
 const isLoading = ref(true)
+const notification = ref({
+  show: false,
+  type: 'info',
+  title: '',
+  message: '',
+  icon: ''
+})
+
+function showNotification(type, message, title = '') {
+  const iconMap = {
+    success: 'check-circle',
+    error: 'alert-triangle',
+    warning: 'alert-triangle',
+    info: 'info'
+  }
+  
+  notification.value = {
+    show: true,
+    type,
+    title,
+    message,
+    icon: iconMap[type] || 'chef-hat'
+  }
+  
+  reinitializeIcons();
+  
+  setTimeout(() => {
+    hideNotification()
+  }, 5000)
+}
+
+function hideNotification() {
+  notification.value.show = false
+}
 
 const api = {
   async request(endpoint, options = {}) {
@@ -451,18 +497,11 @@ onMounted(async () => {
     populateForm(response.recipe || response);
   } catch (error) {
     console.error('Failed to load recipe:', error);
-    alert(`Failed to load recipe: ${error.message}`);
+    showNotification('error', `Failed to load recipe: ${error.message}`, 'Load Failed');
     goBack();
   } finally {
     isLoading.value = false;
-    
-    // Initialize Lucide icons after loading
-    setTimeout(() => {
-      if (window.lucide) {
-        window.lucide.createIcons();
-        console.log('EditRecipe: Initial icons loaded');
-      }
-    }, 200);
+    reinitializeIcons();
   }
 });
 
@@ -505,36 +544,36 @@ function handleImageUpload(event) {
 
   const maxSize = 5 * 1024 * 1024
   if (file.size > maxSize) {
-    alert('Image file is too large. Please choose an image smaller than 5MB.')
+    showNotification('error', 'Image file is too large. Please choose an image smaller than 5MB.', 'File Too Large');
     return
   }
 
   if (!file.type.startsWith('image/')) {
-    alert('Please select a valid image file.')
+    showNotification('error', 'Please select a valid image file.', 'Invalid File Type');
     return
   }
 
   const reader = new FileReader()
   reader.onload = (e) => {
     recipeForm.value.imageUrl = e.target.result
+    showNotification('success', 'Image uploaded successfully!', 'Image Added');
     reinitializeIcons();
   }
   reader.onerror = () => {
-    alert('Error reading the image file. Please try again.')
+    showNotification('error', 'Error reading the image file. Please try again.', 'File Error');
+    reinitializeIcons();
   }
   reader.readAsDataURL(file)
 }
 
 async function updateRecipe() {
   if (!isFormValid.value) {
-    alert('Please fill in all required fields')
+    showNotification('warning', 'Please fill in all required fields to update your recipe.', 'Missing Information');
     return
   }
 
   try {
     isSaving.value = true;
-    
-    // Reinitialize icons to show loading state
     reinitializeIcons();
 
     const backendRecipeData = {
@@ -555,7 +594,11 @@ async function updateRecipe() {
         })),
       time: `${recipeForm.value.cookTime} minutes`,
       difficulty: parseInt(recipeForm.value.difficulty),
-      rating: 5
+      rating: 5,
+      servings: recipeForm.value.servings || '',
+      category: recipeForm.value.category || '',
+      cuisine: recipeForm.value.cuisine || '',
+      notes: recipeForm.value.notes || ''
     };
 
     console.log('Updating recipe data:', backendRecipeData);
@@ -564,17 +607,16 @@ async function updateRecipe() {
     
     console.log('Recipe updated successfully:', response);
     
-    alert(`Recipe "${recipeForm.value.title}" updated successfully!`);
+    showNotification('success', `Recipe "${recipeForm.value.title}" updated successfully!`, 'Update Successful');
     
     emit('recipe-updated', response.recipe);
     goBack();
 
   } catch (error) {
     console.error('Failed to update recipe:', error);
-    alert(`Failed to update recipe: ${error.message}`);
+    showNotification('error', `Failed to update recipe: ${error.message}`, 'Update Failed');
   } finally {
     isSaving.value = false;
-    // Reinitialize icons after saving is complete
     reinitializeIcons();
   }
 }
@@ -586,20 +628,18 @@ async function deleteRecipe() {
 
   try {
     isSaving.value = true;
-    
-    // Reinitialize icons to show loading state
     reinitializeIcons();
     
     await api.deleteRecipe(props.recipeId);
     
-    alert(`Recipe "${recipeForm.value.title}" deleted successfully!`);
+    showNotification('success', `Recipe "${recipeForm.value.title}" deleted successfully!`, 'Delete Successful');
     
     emit('recipe-deleted', props.recipeId);
     goBack();
 
   } catch (error) {
     console.error('Failed to delete recipe:', error);
-    alert(`Failed to delete recipe: ${error.message}`);
+    showNotification('error', `Failed to delete recipe: ${error.message}`, 'Delete Failed');
   } finally {
     isSaving.value = false;
     reinitializeIcons();
@@ -608,10 +648,197 @@ async function deleteRecipe() {
 
 function goBack() {
   emit('go-home')
+  reinitializeIcons();
 }
 </script>
 
 <style scoped>
+/* ===== LUCIDE ICON BASE STYLES ===== */
+[data-lucide] {
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ===== NAVIGATION & BUTTON ICONS ===== */
+.btn-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  stroke-width: 2;
+}
+
+.btn-icon.spinning {
+  animation: spin 1s linear infinite;
+}
+
+/* ===== SECTION HEADER ICONS ===== */
+.section-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--primary-color);
+  margin-right: 12px;
+  stroke-width: 2.5;
+  flex-shrink: 0;
+}
+
+/* ===== UPLOAD & IMAGE ICONS ===== */
+.upload-icon-lucide {
+  width: 48px;
+  height: 48px;
+  color: var(--primary-color);
+  margin-bottom: 16px;
+  stroke-width: 1.5;
+}
+
+.remove-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.5;
+}
+
+/* ===== ADD/REMOVE ACTION ICONS ===== */
+.add-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  stroke-width: 2.5;
+}
+
+/* ===== NOTIFICATION STYLES (FROM Home.vue) ===== */
+.notification-overlay {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.notification {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  min-width: 320px;
+  max-width: 400px;
+  background: var(--background-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--background-tertiary);
+  position: relative;
+  overflow: hidden;
+  pointer-events: auto;
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.notification::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--primary-color);
+}
+
+.notification-success {
+  background: linear-gradient(135deg, var(--background-primary) 0%, var(--success-light) 100%);
+}
+
+.notification-success::before {
+  background: var(--success-color);
+}
+
+.notification-error {
+  background: linear-gradient(135deg, var(--background-primary) 0%, #fee2e2 100%);
+}
+
+.notification-error::before {
+  background: var(--danger-color);
+}
+
+.notification-warning {
+  background: linear-gradient(135deg, var(--background-primary) 0%, #fef3c7 100%);
+}
+
+.notification-warning::before {
+  background: var(--warning-color);
+}
+
+.notification-info {
+  background: linear-gradient(135deg, var(--background-primary) 0%, var(--primary-light) 100%);
+}
+
+.notification-info::before {
+  background: var(--primary-color);
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.notification-message {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  margin-top: -2px;
+}
+
+.notification-close:hover {
+  background: var(--background-tertiary);
+  color: var(--text-primary);
+  transform: scale(1.1);
+}
+
+.notification-icon-lucide {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  animation: shake 0.6s ease-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+  20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
 /* ===== EDIT RECIPE PAGE STYLES ===== */
 .edit-recipe-page {
   min-height: 100vh;
@@ -638,7 +865,8 @@ function goBack() {
 }
 
 .loading-spinner {
-  font-size: 3rem;
+  width: 48px;
+  height: 48px;
   color: var(--primary-color);
   animation: spin 1s linear infinite;
   margin-bottom: var(--space-4);
@@ -844,9 +1072,10 @@ function goBack() {
   background: var(--primary-light);
 }
 
-.upload-icon {
-  font-size: 3rem;
-  display: block;
+.upload-icon-lucide {
+  width: 48px;
+  height: 48px;
+  color: var(--primary-color);
   margin-bottom: var(--space-4);
 }
 
@@ -926,7 +1155,7 @@ function goBack() {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: var(--transition-fast);
+  transition: background var(--transition-fast);
 }
 
 .remove-ingredient-btn:hover {
@@ -942,6 +1171,9 @@ function goBack() {
   cursor: pointer;
   font-weight: 600;
   transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .add-ingredient-btn:hover {
@@ -1022,6 +1254,9 @@ function goBack() {
   cursor: pointer;
   font-weight: 600;
   transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .add-step-btn:hover {
@@ -1054,6 +1289,10 @@ function goBack() {
   transition: all var(--transition-fast);
   box-shadow: var(--shadow-md);
   min-width: 140px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
 }
 
 .btn-primary {
@@ -1148,8 +1387,39 @@ function goBack() {
     padding: var(--space-6);
   }
   
-  .upload-icon {
-    font-size: 2rem;
+  .upload-icon-lucide {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .btn-icon {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .section-icon {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .notification-overlay {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+  }
+  
+  .notification {
+    min-width: auto;
+    max-width: none;
+    padding: 14px 16px;
+  }
+  
+  .notification-title {
+    font-size: var(--font-size-xs);
+  }
+  
+  .notification-message {
+    font-size: var(--font-size-xs);
   }
 }
 

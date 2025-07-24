@@ -3,12 +3,14 @@
     <!-- Notification System -->
     <div v-if="notification.show" class="notification-overlay">
       <div :class="['notification', `notification-${notification.type}`]">
-        <div class="notification-icon">{{ notification.icon }}</div>
+        <i :data-lucide="notification.icon" class="notification-icon"></i>
         <div class="notification-content">
           <div v-if="notification.title" class="notification-title">{{ notification.title }}</div>
           <div class="notification-message">{{ notification.message }}</div>
         </div>
-        <button class="notification-close" @click="hideNotification">✕</button>
+        <button class="notification-close" @click="hideNotification">
+          <i data-lucide="x" class="close-icon"></i>
+        </button>
       </div>
     </div>
     
@@ -36,14 +38,14 @@
                   class="nav-arrow nav-arrow-left"
                   :disabled="currentImageIndex === 0"
                 >
-                  &#8249;
+                  <i data-lucide="chevron-left" class="arrow-icon"></i>
                 </button>
                 <button 
                   @click="nextImage" 
                   class="nav-arrow nav-arrow-right"
                   :disabled="currentImageIndex >= recipe.images.length - 1"
                 >
-                  &#8250;
+                  <i data-lucide="chevron-right" class="arrow-icon"></i>
                 </button>
               </div>
               
@@ -99,9 +101,9 @@
 
           <!-- Action Buttons -->
           <div class="action-buttons">
-
             <button class="btn btn-like" @click="likeRecipe">
-              <span>{{ recipe.isLiked ? '❤️ Liked' : '🤍 Like' }}</span>
+              <i :data-lucide="recipe.isLiked ? 'heart' : 'heart'" :class="{ 'liked': recipe.isLiked }" class="action-icon"></i>
+              <span>{{ recipe.isLiked ? 'Liked' : 'Like' }}</span>
             </button>
             
             <!-- Interactive Rating Section -->
@@ -127,7 +129,8 @@
             </div>
             
             <button v-if="isRecipeOwner" class="btn btn-edit" @click="editRecipe">
-              <span>✏️ Edit</span> 
+              <i data-lucide="pencil" class="action-icon"></i>
+              <span>Edit</span>
             </button>
           </div>
         </div>
@@ -206,7 +209,9 @@
         <!-- Modal Header -->
         <div class="gallery-modal-header">
           <h3 class="gallery-modal-title">{{ recipe.title }}</h3>
-          <button class="gallery-close-btn" @click="closeGalleryModal">✕</button>
+          <button class="gallery-close-btn" @click="closeGalleryModal">
+            <i data-lucide="x" class="close-icon"></i>
+          </button>
         </div>
         
         <!-- Main Modal Image -->
@@ -226,14 +231,14 @@
                 class="modal-nav-arrow modal-nav-left"
                 :disabled="modalImageIndex === 0"
               >
-                &#8249;
+                <i data-lucide="chevron-left" class="arrow-icon"></i>
               </button>
               <button 
                 @click="nextModalImage" 
                 class="modal-nav-arrow modal-nav-right"
                 :disabled="modalImageIndex >= recipe.images.length - 1"
               >
-                &#8250;
+                <i data-lucide="chevron-right" class="arrow-icon"></i>
               </button>
             </div>
             
@@ -268,7 +273,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import EditRecipe from './EditRecipe.vue'
-
 
 // API utilities
 const API_BASE_URL = 'http://localhost:8080';
@@ -338,7 +342,6 @@ const checkLoginStatus = async () => {
     const userInfo = await api.request('/me');
     isLoggedIn.value = true;
     currentUser.value = userInfo;
-    // Load user's rating for this recipe once logged in
     await loadUserRating();
   } catch (error) {
     console.log('Not logged in:', error.message);
@@ -350,10 +353,10 @@ const checkLoginStatus = async () => {
 // Notification system
 function showNotification(type, message, title = '') {
   const iconMap = {
-    success: '✅',
-    error: '⚠️',
-    warning: '⚠️',
-    info: 'ℹ️'
+    success: 'check-circle',
+    error: 'alert-triangle',
+    warning: 'alert-triangle',
+    info: 'info'
   };
   
   notification.value = {
@@ -361,10 +364,11 @@ function showNotification(type, message, title = '') {
     type,
     title,
     message,
-    icon: iconMap[type] || '🍳'
+    icon: iconMap[type] || 'chef-hat'
   };
   
-  // Auto-hide after 4 seconds
+  reinitializeIcons();
+  
   setTimeout(() => {
     hideNotification();
   }, 4000);
@@ -372,6 +376,16 @@ function showNotification(type, message, title = '') {
 
 function hideNotification() {
   notification.value.show = false;
+  reinitializeIcons();
+}
+
+function reinitializeIcons() {
+  setTimeout(() => {
+    if (window.lucide) {
+      window.lucide.createIcons();
+      console.log('RecipeDetailsPage: Icons reinitialized');
+    }
+  }, 50);
 }
 
 const props = defineProps({
@@ -403,7 +417,6 @@ const showEditRecipe = ref(false)
 const recipe = computed(() => {
   if (!props.recipeData) return null;
   
-  
   if (props.recipeData.images) {
     console.log('📏 Images length:', props.recipeData.images.length);
     console.log('🖼️ First image:', props.recipeData.images[0]);
@@ -415,13 +428,8 @@ const recipe = computed(() => {
     if (!instructions || !Array.isArray(instructions)) return [];
     
     return instructions.map(instruction => {
-      // If it's already a string, return as is
       if (typeof instruction === 'string') return instruction;
-      
-      // If it's an object with Steps property, extract the Steps
       if (instruction.Steps) return instruction.Steps;
-      
-      // Fallback to string representation
       return instruction.toString();
     });
   };
@@ -431,30 +439,21 @@ const recipe = computed(() => {
     if (!ingredients || !Array.isArray(ingredients)) return [];
     
     return ingredients.map(ingredient => {
-      // If it's already a string, return as is
       if (typeof ingredient === 'string') return ingredient;
-      
-      // If it's an object with name, quantity, unit properties
       if (ingredient.name) {
         const quantity = ingredient.quantity || '';
         const unit = ingredient.unit || '';
         const name = ingredient.name || '';
-        
-        // Format: "1 cup water" or "2 pieces onion"
         return `${quantity} ${unit} ${name}`.trim();
       }
-      
-      // Fallback to string representation
       return ingredient.toString();
     });
   };
   
-  // Handle images - check multiple possible formats
   let processedImages = [];
   if (props.recipeData.images && Array.isArray(props.recipeData.images) && props.recipeData.images.length > 0) {
     processedImages = props.recipeData.images;
   } else if (props.recipeData.image) {
-    // If there's a single image property, convert it to array format
     processedImages = [{ url: props.recipeData.image }];
   }
   
@@ -465,7 +464,6 @@ const recipe = computed(() => {
     title: props.recipeData.title || props.recipeData.name || 'Recipe',
     description: props.recipeData.description || 'Delicious recipe',
     image: props.recipeData.image || 
-
            (props.recipeData.images?.length > 0 ? props.recipeData.images[0].url : 'https://via.placeholder.com/400x300'),
     images: props.recipeData.images || [],
     rating: props.recipeData.rating || 0,
@@ -517,8 +515,6 @@ const loadIngredientState = (recipeId) => {
   }
 }
 
-
-
 // Rating functions
 const submitRating = async (rating) => {
   if (!isLoggedIn.value) {
@@ -543,11 +539,9 @@ const submitRating = async (rating) => {
     userRating.value = rating;
     showNotification('success', `You rated "${getRecipeTitle(recipe.value)}" ${rating} star${rating > 1 ? 's' : ''}!`, 'Rating Submitted');
     
-    // Update the recipe's overall rating display with response data
     if (response.averageRating !== undefined) {
       recipe.value.rating = response.averageRating;
       recipe.value.ratingCount = response.ratingCount;
-      // Also update the original props data so it persists
       if (props.recipeData) {
         props.recipeData.rating = response.averageRating;
         props.recipeData.ratingCount = response.ratingCount;
@@ -574,14 +568,8 @@ const loadUserRating = async () => {
     const response = await api.getUserRating(recipeId);
     userRating.value = response.rating || 0;
   } catch (error) {
-    // User hasn't rated this recipe yet, which is fine
     userRating.value = 0;
   }
-};
-
-const loadRecipeRating = async () => {
-  // This will be implemented when we add the backend endpoint to get overall recipe rating
-  // For now, we'll keep the existing static rating display
 };
 
 // Methods
@@ -593,10 +581,8 @@ const likeRecipe = async () => {
 
   if (!recipe.value || !props.recipeData) return;
 
-  // Get the recipe ID from the original props data, which should have the MongoDB _id
   const recipeId = props.recipeData._id || props.recipeData.id;
   
-  // Validate that we have a proper MongoDB ObjectId (24 character hex string)
   if (!recipeId || typeof recipeId !== 'string' || recipeId.length !== 24) {
     console.error('Invalid recipe ID:', recipeId);
     showNotification('error', 'Invalid recipe ID. Cannot like this recipe.', 'Error');
@@ -611,13 +597,11 @@ const likeRecipe = async () => {
       showNotification('info', `Removed "${getRecipeTitle(recipe.value)}" from favorites`, 'Recipe Unliked');
     } else {
       await api.likeRecipe(recipeId);
-      showNotification('success', `Added "${getRecipeTitle(recipe.value)}" to favorites!`, 'Recipe Liked ❤️');
+      showNotification('success', `Added "${getRecipeTitle(recipe.value)}" to favorites!`, 'Recipe Liked');
     }
     
-    // Update local state
     recipe.value.isLiked = !wasLiked;
     
-    // Update likes count if available
     if (props.recipeData.likes !== undefined) {
       props.recipeData.likes += wasLiked ? -1 : 1;
     }
@@ -634,37 +618,35 @@ const editRecipe = async () => {
     return;
   }
 
-  // Show the EditRecipe component
   showEditRecipe.value = true;
   showNotification('info', 'Opening recipe editor...', 'Edit Mode');
+  reinitializeIcons();
 }
 
-// Handle EditRecipe component events
 const handleEditRecipeClose = () => {
   showEditRecipe.value = false;
+  reinitializeIcons();
 }
 
 const handleRecipeUpdated = (updatedRecipe) => {
   showEditRecipe.value = false;
   showNotification('success', 'Recipe updated successfully!', 'Recipe Saved');
-  // Optionally emit to parent or refresh recipe data
   emit('recipe-updated', updatedRecipe);
+  reinitializeIcons();
 }
 
 const handleRecipeDeleted = (recipeId) => {
   showEditRecipe.value = false;
   showNotification('success', 'Recipe deleted successfully!', 'Recipe Deleted');
-  // Emit to parent to handle navigation back to home
   emit('recipe-deleted', recipeId);
+  reinitializeIcons();
 }
 
-// Clear ingredient progress for current recipe
 const clearIngredientProgress = () => {
   if (recipe.value) {
     const recipeId = recipe.value.id || props.recipeData?.id || props.recipeData?._id || 'unknown'
     try {
       localStorage.removeItem(getStorageKey(recipeId))
-      // Reset all ingredients to unchecked
       const newCheckedState = {}
       recipe.value.ingredients.forEach((_, index) => {
         newCheckedState[index] = false
@@ -677,7 +659,6 @@ const clearIngredientProgress = () => {
   }
 }
 
-// Image gallery navigation methods
 const nextImage = () => {
   if (currentImageIndex.value < recipe.value.images.length - 1) {
     currentImageIndex.value++;
@@ -690,13 +671,11 @@ const previousImage = () => {
   }
 };
 
-// Handle image loading errors
 const handleImageError = (event) => {
   console.warn('Image failed to load:', event.target.src);
   event.target.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
 };
 
-// Gallery modal functions
 const openGalleryModal = (imageIndex = 0) => {
   console.log('🔍 Opening gallery modal with index:', imageIndex);
   console.log('🔍 Recipe images available:', recipe.value?.images);
@@ -708,37 +687,36 @@ const openGalleryModal = (imageIndex = 0) => {
   
   modalImageIndex.value = imageIndex;
   showGalleryModal.value = true;
-  // Prevent body scroll when modal is open
   document.body.style.overflow = 'hidden';
+  reinitializeIcons();
 };
 
 const closeGalleryModal = () => {
   showGalleryModal.value = false;
-  // Restore body scroll
   document.body.style.overflow = 'auto';
+  reinitializeIcons();
 };
 
 const nextModalImage = () => {
   if (modalImageIndex.value < recipe.value.images.length - 1) {
     modalImageIndex.value++;
+    reinitializeIcons();
   }
 };
 
 const previousModalImage = () => {
   if (modalImageIndex.value > 0) {
     modalImageIndex.value--;
+    reinitializeIcons();
   }
 };
 
-
-// Initialize checklist state with localStorage persistence
 const initializeIngredients = (recipeData) => {
   if (!recipeData || !recipeData.ingredients) return
   
   const recipeId = recipeData.id || recipeData._id || 'unknown'
   const savedState = loadIngredientState(recipeId)
   
-  // Initialize checklist with saved state or default to false
   const newCheckedState = {}
   recipeData.ingredients.forEach((_, index) => {
     newCheckedState[index] = savedState[index] || false
@@ -747,7 +725,6 @@ const initializeIngredients = (recipeData) => {
   checkedIngredients.value = newCheckedState
 }
 
-// Watch for ingredient changes to save to localStorage
 watch(checkedIngredients, (newState) => {
   if (recipe.value && Object.keys(newState).length > 0) {
     const recipeId = recipe.value.id || props.recipeData?.id || props.recipeData?._id || 'unknown'
@@ -755,19 +732,14 @@ watch(checkedIngredients, (newState) => {
   }
 }, { deep: true })
 
-// Initialize checklist state on mount (moved to combined onMounted above)
-
-// Watch for recipe changes to reinitialize checklist and reset image index
 watch(() => props.recipeData, (newRecipe) => {
   if (newRecipe) {
     initializeIngredients(newRecipe)
-    // Reset image gallery to first image when recipe changes
     currentImageIndex.value = 0;
     modalImageIndex.value = 0;
   }
 }, { immediate: true })
 
-// Keyboard navigation for modal
 const handleKeydown = (event) => {
   if (!showGalleryModal.value) return;
   
@@ -784,21 +756,17 @@ const handleKeydown = (event) => {
   }
 };
 
-// Add keyboard event listener when component mounts
 onMounted(() => {
   if (props.recipeData) {
     initializeIngredients(props.recipeData)
   }
-  // Check user login status
   checkLoginStatus();
-  // Add keyboard event listener
   document.addEventListener('keydown', handleKeydown);
+  reinitializeIcons();
 });
 
-// Remove keyboard event listener when component unmounts
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown);
-  // Restore body scroll in case modal was open
   document.body.style.overflow = 'auto';
 });
 </script>
@@ -809,7 +777,58 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
 }
 
-/* ===== NAVIGATION STYLES ===== */
+/* Lucide Icon Base Styles */
+[data-lucide] {
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Notification Icon */
+.notification-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  animation: shake 0.6s ease-out;
+}
+
+/* Action Icons (Like and Edit) */
+.action-icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+
+.action-icon.liked {
+  fill: var(--primary-color);
+  stroke: var(--primary-color);
+}
+
+/* Navigation Arrow Icons */
+.arrow-icon {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2;
+}
+
+/* Close Icon */
+.close-icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+
+/* Animation for Notification Icon */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+  20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+/* Navigation Styles */
 .nav-content {
   max-width: 1400px;
   margin: 0 auto;
@@ -1028,7 +1047,7 @@ onUnmounted(() => {
   color: var(--danger-color);
 }
 
-/* ===== RECIPE DETAILS STYLES ===== */
+/* Recipe Details Styles */
 .recipe-details {
   max-width: 1200px;
   margin: 0 auto;
@@ -1051,7 +1070,7 @@ onUnmounted(() => {
   flex: 0 0 400px;
 }
 
-/* ===== IMAGE GALLERY STYLES ===== */
+/* Image Gallery Styles */
 .image-gallery {
   width: 100%;
 }
@@ -1167,118 +1186,9 @@ onUnmounted(() => {
   object-fit: cover;
   border-radius: var(--radius-xl);
   background: linear-gradient(45deg, #f0f4f8, #d6e1ea);
-  transition: opacity 0.3s ease;
 }
 
-.image-nav-arrows {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  transform: translateY(-50%);
-  display: flex;
-  justify-content: space-between;
-  padding: 0 var(--space-4);
-  pointer-events: none;
-}
-
-.nav-arrow {
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
-  border: none;
-  border-radius: var(--radius-full);
-  width: 40px;
-  height: 40px;
-  font-size: 20px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-fast);
-  pointer-events: auto;
-  backdrop-filter: blur(4px);
-}
-
-.nav-arrow:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.8);
-  transform: scale(1.1);
-}
-
-.nav-arrow:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.image-counter {
-  position: absolute;
-  bottom: var(--space-4);
-  right: var(--space-4);
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  backdrop-filter: blur(4px);
-}
-
-.image-thumbnails {
-  display: flex;
-  gap: var(--space-2);
-  overflow-x: auto;
-  padding: var(--space-2) 0;
-}
-
-.thumbnail-btn {
-  border: none;
-  background: none;
-  cursor: pointer;
-  padding: 0;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
-  opacity: 0.6;
-  transform: scale(0.9);
-}
-
-.thumbnail-btn:hover {
-  opacity: 0.8;
-  transform: scale(0.95);
-}
-
-.thumbnail-btn.active {
-  opacity: 1;
-  transform: scale(1);
-  box-shadow: 0 0 0 3px var(--primary-color);
-}
-
-.thumbnail-img {
-  width: 60px;
-  height: 45px;
-  object-fit: cover;
-  border-radius: var(--radius-md);
-  display: block;
-}
-
-.no-image img {
-  width: 100%;
-  height: 300px;
-  object-fit: cover;
-  border-radius: var(--radius-xl);
-  background: linear-gradient(45deg, #f0f4f8, #d6e1ea);
-}
-
-.clickable {
-  cursor: pointer;
-  transition: opacity var(--transition-fast);
-}
-
-.clickable:hover {
-  opacity: 0.9;
-}
-
-/* ===== GALLERY MODAL STYLES ===== */
+/* Gallery Modal Styles */
 .gallery-modal-overlay {
   position: fixed;
   top: 0;
@@ -1634,7 +1544,7 @@ onUnmounted(() => {
   color: var(--text-primary);
 }
 
-/* ===== INTERACTIVE RATING STYLES ===== */
+/* Interactive Rating Styles */
 .rating-section {
   display: flex;
   align-items: center;
@@ -1757,7 +1667,7 @@ onUnmounted(() => {
   line-height: 50px;
 }
 
-/* ===== INGREDIENTS CHECKLIST STYLES ===== */
+/* Ingredients Checklist Styles */
 .ingredients-checklist {
   margin-bottom: var(--space-6);
 }
@@ -1883,7 +1793,7 @@ onUnmounted(() => {
   transition: width var(--transition-normal);
 }
 
-/* ===== STYLED NOTIFICATIONS ===== */
+/* Styled Notifications */
 .notification-overlay {
   position: fixed;
   top: 20px;
@@ -1962,25 +1872,6 @@ onUnmounted(() => {
   background: var(--primary-color);
 }
 
-.notification-icon {
-  font-size: 20px;
-  margin-top: 2px;
-  flex-shrink: 0;
-  animation: iconPulse 0.6s ease-out;
-}
-
-@keyframes iconPulse {
-  0% {
-    transform: scale(0);
-  }
-  50% {
-    transform: scale(1.2);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
 .notification-content {
   flex: 1;
   min-width: 0;
@@ -2020,220 +1911,7 @@ onUnmounted(() => {
   transform: scale(1.1);
 }
 
-/* ===== GALLERY MODAL STYLES ===== */
-.gallery-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.95);
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-4);
-  backdrop-filter: blur(4px);
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.gallery-modal {
-  background: var(--background-primary);
-  border-radius: var(--radius-2xl);
-  max-width: 90vw;
-  max-height: 90vh;
-  width: 100%;
-  max-width: 1200px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: var(--shadow-xl);
-  animation: modalSlideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: scale(0.8) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-.gallery-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-6);
-  border-bottom: 1px solid var(--background-tertiary);
-  background: var(--background-secondary);
-}
-
-.gallery-modal-title {
-  font-size: var(--font-size-xl);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-  max-width: 80%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.gallery-close-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: var(--space-2);
-  border-radius: var(--radius-full);
-  transition: all var(--transition-fast);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-}
-
-.gallery-close-btn:hover {
-  background: var(--background-tertiary);
-  color: var(--text-primary);
-  transform: scale(1.1);
-}
-
-.gallery-modal-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.modal-image-container {
-  position: relative;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--background-primary);
-  min-height: 400px;
-}
-
-.modal-main-image {
-  max-width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-}
-
-.modal-nav-arrows {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  transform: translateY(-50%);
-  display: flex;
-  justify-content: space-between;
-  padding: 0 var(--space-6);
-  pointer-events: none;
-}
-
-.modal-nav-arrow {
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  border: none;
-  border-radius: var(--radius-full);
-  width: 50px;
-  height: 50px;
-  font-size: 24px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-fast);
-  pointer-events: auto;
-  backdrop-filter: blur(8px);
-}
-
-.modal-nav-arrow:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.9);
-  transform: scale(1.1);
-}
-
-.modal-nav-arrow:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.modal-image-counter {
-  position: absolute;
-  bottom: var(--space-6);
-  right: var(--space-6);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  backdrop-filter: blur(8px);
-}
-
-.modal-thumbnails {
-  display: flex;
-  gap: var(--space-3);
-  padding: var(--space-6);
-  overflow-x: auto;
-  background: var(--background-secondary);
-  border-top: 1px solid var(--background-tertiary);
-  justify-content: center;
-  max-height: 120px;
-}
-
-.modal-thumbnail-btn {
-  border: none;
-  background: none;
-  cursor: pointer;
-  padding: 0;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
-  opacity: 0.6;
-  transform: scale(0.9);
-}
-
-.modal-thumbnail-btn:hover {
-  opacity: 0.8;
-  transform: scale(0.95);
-}
-
-.modal-thumbnail-btn.active {
-  opacity: 1;
-  transform: scale(1);
-  box-shadow: 0 0 0 3px var(--primary-color);
-}
-
-.modal-thumbnail-img {
-  width: 80px;
-  height: 60px;
-  object-fit: cover;
-  border-radius: var(--radius-md);
-  display: block;
-}
-
-/* ===== RESPONSIVE DESIGN ===== */
+/* Responsive Design */
 @media (max-width: 1024px) {
   .nav-content {
     grid-template-columns: 1fr;

@@ -3,7 +3,7 @@
     <!-- confirmation-->
     <div v-if="showConfirmDialog" class="confirm-overlay" @click.self="cancelConfirm">
       <div class="confirm-modal">
-        <div class="confirm-icon">{{ confirmDialog.icon }}</div>
+        <i :data-lucide="confirmDialog.icon" class="confirm-icon-lucide"></i>
         <h3 class="confirm-title">{{ confirmDialog.title }}</h3>
         <p class="confirm-message">{{ confirmDialog.message }}</p>
         <div class="confirm-actions">
@@ -20,7 +20,7 @@
     <!-- notification -->
     <div v-if="notification.show" class="notification-overlay">
       <div :class="['notification', `notification-${notification.type}`]">
-        <div class="notification-icon">{{ notification.icon }}</div>
+        <i :data-lucide="notification.icon" class="notification-icon-lucide"></i>
         <div class="notification-content">
           <div v-if="notification.title" class="notification-title">{{ notification.title }}</div>
           <div class="notification-message">{{ notification.message }}</div>
@@ -66,54 +66,6 @@
           </div>
         </div>
 
-        <!-- edit profile mode -->
-        <div class="edit-profile-section" v-if="editMode">
-          <div class="edit-form-container">
-            <h2>Edit Profile</h2>
-            
-            <form @submit.prevent="saveProfile" class="edit-form">
-              <div class="form-group">
-                <label for="name">Full Name</label>
-                <input 
-                  type="text" 
-                  id="name" 
-                  v-model="editForm.name"
-                  placeholder="Enter your full name"
-                />
-              </div>
-              
-              <div class="form-group">
-                <label for="email">Email Address</label>
-                <input 
-                  type="email" 
-                  id="email" 
-                  v-model="editForm.email"
-                  placeholder="Enter your email"
-                />
-              </div>
-              
-              <div class="form-group">
-                <label for="bio">Bio</label>
-                <textarea 
-                  id="bio" 
-                  v-model="editForm.bio"
-                  placeholder="Tell us about yourself..."
-                  rows="4"
-                ></textarea>
-              </div>
-              
-              <div class="form-actions">
-                <button type="button" class="btn-secondary" @click="cancelEdit">
-                  Cancel
-                </button>
-                <button type="submit" class="btn-primary" :disabled="isSaving">
-                  {{ isSaving ? 'Saving...' : 'Save Changes' }}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-
         <div class="profile-tabs">
           <div class="tabs-header">
             <button 
@@ -145,14 +97,16 @@
                   <img :src="getRecipeImage(recipe)" :alt="getRecipeTitle(recipe)" />
                   <div class="recipe-actions">
                     <button class="action-btn edit-btn" @click.stop="editRecipe(recipe)">
-                      ✏️
+                      <i data-lucide="pencil" class="action-icon"></i>
                     </button>
                     <button 
                       class="action-btn delete-btn" 
                       @click.stop="showDeleteConfirm(recipe)"
                       :disabled="deleteLoading === getRecipeId(recipe)"
                     >
-                      {{ deleteLoading === getRecipeId(recipe) ? '⏳' : '🗑️' }}
+                      <i :data-lucide="deleteLoading === getRecipeId(recipe) ? 'loader-2' : 'trash-2'" 
+                         :class="{ 'spinning': deleteLoading === getRecipeId(recipe) }" 
+                         class="action-icon"></i>
                     </button>
                   </div>
                 </div>
@@ -173,7 +127,7 @@
             </div>
             
             <div class="empty-state" v-else>
-              <div class="empty-icon">👨‍🍳</div>
+              <i data-lucide="chef-hat" class="empty-icon-lucide"></i>
               <h3>No recipes yet</h3>
               <p>Start creating your first recipe!</p>
               <button class="btn-primary" @click="goToCreateRecipe">
@@ -198,7 +152,9 @@
                     @click.stop="showUnlikeConfirm(recipe)"
                     :disabled="unlikeLoading === getRecipeId(recipe)"
                   >
-                    {{ unlikeLoading === getRecipeId(recipe) ? '⏳' : '❤️' }}
+                    <i :data-lucide="unlikeLoading === getRecipeId(recipe) ? 'loader-2' : 'heart'" 
+                       :class="{ 'spinning': unlikeLoading === getRecipeId(recipe) }" 
+                       class="like-icon"></i>
                   </button>
                 </div>
                 <div class="card-content">
@@ -219,7 +175,7 @@
             </div>
             
             <div class="empty-state" v-else>
-              <div class="empty-icon">💔</div>
+              <i data-lucide="heart-off" class="empty-icon-lucide"></i>
               <h3>No liked recipes yet</h3>
               <p>Explore recipes!</p>
               <button class="btn-primary" @click="goToHome">
@@ -336,6 +292,16 @@ const api = {
   }
 };
 
+// Helper function to reinitialize Lucide icons
+function reinitializeIcons() {
+  setTimeout(() => {
+    if (window.lucide) {
+      window.lucide.createIcons();
+      console.log('ProfilePage: Icons reinitialized');
+    }
+  }, 50);
+}
+
 function convertBackendRecipe(backendRecipe) {
   return {
     id: backendRecipe._id,
@@ -417,15 +383,22 @@ const joinedDate = computed(() => {
 })
 
 function showStyledConfirm(options) {
+  const iconMap = {
+    delete: 'trash-2',
+    unlike: 'heart',
+    default: 'help-circle'
+  }
+  
   confirmDialog.value = {
     title: options.title || 'Confirm Action',
     message: options.message || 'Are you sure?',
-    icon: options.icon || '❓',
+    icon: iconMap[options.type || 'default'] || options.icon || 'help-circle',
     confirmText: options.confirmText || 'Confirm',
     cancelText: options.cancelText || 'Cancel',
     onConfirm: options.onConfirm || (() => {})
   }
   showConfirmDialog.value = true
+  reinitializeIcons();
 }
 
 function confirmAction() {
@@ -433,18 +406,20 @@ function confirmAction() {
     confirmDialog.value.onConfirm()
   }
   showConfirmDialog.value = false
+  reinitializeIcons();
 }
 
 function cancelConfirm() {
   showConfirmDialog.value = false
+  reinitializeIcons();
 }
 
 function showNotification(type, message, title = '') {
   const iconMap = {
-    success: '✅',
-    error: '⚠️',
-    warning: '⚠️',
-    info: 'ℹ️'
+    success: 'check-circle',
+    error: 'alert-triangle',
+    warning: 'alert-triangle',
+    info: 'info'
   }
   
   notification.value = {
@@ -452,8 +427,10 @@ function showNotification(type, message, title = '') {
     type,
     title,
     message,
-    icon: iconMap[type] || '🍳'
+    icon: iconMap[type] || 'chef-hat'
   }
+  
+  reinitializeIcons();
   
   setTimeout(() => {
     hideNotification()
@@ -462,6 +439,7 @@ function showNotification(type, message, title = '') {
 
 function hideNotification() {
   notification.value.show = false
+  reinitializeIcons();
 }
 
 async function loadUserData() {
@@ -520,6 +498,7 @@ function toggleEditMode() {
     }
   }
   editMode.value = !editMode.value
+  reinitializeIcons();
 }
 
 async function saveProfile() {
@@ -535,29 +514,33 @@ async function saveProfile() {
     
     editMode.value = false
     console.log('Profile saved')
-    showNotification('success', 'Your profile has been updated successfully!', 'Profile Updated ✨');
+    showNotification('success', 'Your profile has been updated successfully!', 'Profile Updated');
   } catch (error) {
     console.error('Failed to save profile:', error);
     showNotification('error', 'Failed to save profile. Please try again.', 'Save Failed');
   } finally {
     isSaving.value = false;
+    reinitializeIcons();
   }
 }
 
 function cancelEdit() {
   editMode.value = false
   editForm.value = { name: '', email: '', bio: '' }
+  reinitializeIcons();
 }
 
 function openRecipe(recipe) {
   console.log('Opening recipe:', getRecipeTitle(recipe))
   emit('go-to-recipe', recipe)
+  reinitializeIcons();
 }
 
 function editRecipe(recipe) {
   const recipeId = getRecipeId(recipe)
   console.log('Editing recipe:', getRecipeTitle(recipe), 'ID:', recipeId)
-  emit('go-to-edit', recipe) // This is correct - don't change this
+  emit('go-to-edit', recipe)
+  reinitializeIcons();
 }
 
 function showDeleteConfirm(recipe) {
@@ -566,7 +549,7 @@ function showDeleteConfirm(recipe) {
   showStyledConfirm({
     title: 'Delete Recipe?',
     message: `Are you sure you want to delete "${recipeTitle}"? This action cannot be undone.`,
-    icon: '🗑️',
+    type: 'delete',
     confirmText: 'Yes, Delete',
     cancelText: 'Keep Recipe',
     onConfirm: () => performDeleteRecipe(recipe)
@@ -579,21 +562,21 @@ async function performDeleteRecipe(recipe) {
   
   try {
     deleteLoading.value = recipeId;
+    reinitializeIcons();
     
-    // ADD THIS LINE - Call the API to actually delete from database
     await api.deleteRecipe(recipeId);
     
-    // Only update local state after successful API deletion
     myRecipes.value = myRecipes.value.filter(r => getRecipeId(r) !== recipeId);
     userStats.value.recipesCreated = myRecipes.value.length;
     
     console.log('Recipe deleted:', recipeTitle);
-    showNotification('success', `"${recipeTitle}" has been deleted successfully`, 'Recipe Deleted 🗑️');
+    showNotification('success', `"${recipeTitle}" has been deleted successfully`, 'Recipe Deleted');
   } catch (error) {
     console.error('Failed to delete recipe:', error);
     showNotification('error', 'Failed to delete recipe. Please try again.', 'Delete Failed');
   } finally {
     deleteLoading.value = null;
+    reinitializeIcons();
   }
 }
 
@@ -603,7 +586,7 @@ function showUnlikeConfirm(recipe) {
   showStyledConfirm({
     title: 'Remove from Favorites?',
     message: `Remove "${recipeTitle}" from your liked recipes?`,
-    icon: '💔',
+    type: 'unlike',
     confirmText: 'Yes, Remove',
     cancelText: 'Keep Favorite',
     onConfirm: () => performUnlike(recipe)
@@ -616,6 +599,7 @@ async function performUnlike(recipe) {
   
   try {
     unlikeLoading.value = recipeId;
+    reinitializeIcons();
     
     await api.unlikeRecipe(recipeId);
     
@@ -629,15 +613,18 @@ async function performUnlike(recipe) {
     showNotification('error', 'Failed to remove from favorites. Please try again.', 'Remove Failed');
   } finally {
     unlikeLoading.value = null;
+    reinitializeIcons();
   }
 }
 
 function goToHome() {
   emit('go-home')
+  reinitializeIcons();
 }
 
 function goToCreateRecipe() {
   emit('go-to-create')
+  reinitializeIcons();
 }
 
 function formatDate(dateString) {
@@ -662,10 +649,69 @@ onMounted(async () => {
   await loadUserData()
   await loadMyRecipes()
   await loadLikedRecipes()
+  reinitializeIcons();
 })
 </script>
 
 <style>
+/* ===== LUCIDE ICON BASE STYLES ===== */
+[data-lucide] {
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ===== NOTIFICATION AND CONFIRMATION ICONS ===== */
+.notification-icon-lucide {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  animation: shake 0.6s ease-out;
+}
+
+.confirm-icon-lucide {
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--space-4);
+  color: var(--primary-color);
+  stroke-width: 1.5;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+  20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+/* ===== ACTION AND LIKE BUTTON ICONS ===== */
+.action-icon, .like-icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+
+.action-icon.spinning, .like-icon.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ===== EMPTY STATE ICONS ===== */
+.empty-icon-lucide {
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--space-6);
+  opacity: 0.6;
+  color: var(--primary-color);
+  stroke-width: 1.5;
+}
+
 /* ===== PROFILE PAGE STYLES ===== */
 .profile-page {
   padding: var(--space-8) var(--space-6);
@@ -682,6 +728,196 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
+}
+
+/* ===== CONFIRMATION DIALOG ===== */
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.confirm-modal {
+  background: var(--background-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--background-tertiary);
+}
+
+.confirm-title {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.confirm-message {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-6);
+}
+.confirm-actions {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: center;
+  align-items: center;
+}
+
+.confirm-actions button {
+  flex: 1;
+  min-width: 120px;
+  max-width: 150px;
+  display: flex; /* Ensure consistency with button content */
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-danger {
+  padding: var(--space-3) var(--space-6);
+  background: var(--danger-color);
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: var(--font-size-base);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-danger:hover {
+  background: var(--danger-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ===== NOTIFICATION STYLES ===== */
+.notification-overlay {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.notification {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  min-width: 320px;
+  max-width: 400px;
+  background: var(--background-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--background-tertiary);
+  position: relative;
+  overflow: hidden;
+  pointer-events: auto;
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.notification::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--primary-color);
+}
+
+.notification-success {
+  background: linear-gradient(135deg, var(--background-primary) 0%, var(--success-light) 100%);
+}
+
+.notification-success::before {
+  background: var(--success-color);
+}
+
+.notification-error {
+  background: linear-gradient(135deg, var(--background-primary) 0%, #fee2e2 100%);
+}
+
+.notification-error::before {
+  background: var(--danger-color);
+}
+
+.notification-warning {
+  background: linear-gradient(135deg, var(--background-primary) 0%, #fef3c7 100%);
+}
+
+.notification-warning::before {
+  background: var(--warning-color);
+}
+
+.notification-info {
+  background: linear-gradient(135deg, var(--background-primary) 0%, var(--primary-light) 100%);
+}
+
+.notification-info::before {
+  background: var(--primary-color);
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.notification-message {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  margin-top: -2px;
+}
+
+.notification-close:hover {
+  background: var(--background-tertiary);
+  color: var(--text-primary);
+  transform: scale(1.1);
 }
 
 /* ===== PROFILE HEADER ===== */
@@ -745,24 +981,6 @@ onMounted(async () => {
   letter-spacing: -0.025em;
 }
 
-.edit-profile-btn {
-  padding: var(--space-3) var(--space-6);
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: var(--radius-full);
-  font-weight: 600;
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  box-shadow: var(--shadow-md);
-}
-
-.edit-profile-btn:hover {
-  background: var(--primary-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
 
 .profile-email {
   font-size: var(--font-size-lg);
@@ -913,39 +1131,6 @@ onMounted(async () => {
   color: var(--text-primary);
 }
 
-/* ===== BIO SECTION ===== */
-.profile-bio-section {
-  background: var(--background-primary);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--background-tertiary);
-}
-
-.bio-container {
-  padding: var(--space-8);
-}
-
-.bio-container h2 {
-  font-size: var(--font-size-2xl);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: var(--space-4);
-}
-
-.bio-text {
-  font-size: var(--font-size-base);
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0;
-}
-
-.bio-placeholder {
-  font-size: var(--font-size-base);
-  color: var(--text-muted);
-  font-style: italic;
-  margin: 0;
-}
-
 /* ===== TABS SECTION ===== */
 .profile-tabs {
   background: var(--background-primary);
@@ -1039,7 +1224,6 @@ onMounted(async () => {
   border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.95);
   cursor: pointer;
-  font-size: var(--font-size-base);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1074,7 +1258,6 @@ onMounted(async () => {
   width: 40px;
   height: 40px;
   cursor: pointer;
-  font-size: var(--font-size-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1169,17 +1352,14 @@ onMounted(async () => {
 
 /* ===== EMPTY STATE ===== */
 .empty-state {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding: var(--space-16) var(--space-8);
   background: var(--background-secondary);
   border-radius: var(--radius-xl);
   border: 2px dashed var(--background-tertiary);
-}
-
-.empty-icon {
-  font-size: 4rem;
-  margin-bottom: var(--space-6);
-  opacity: 0.6;
 }
 
 .empty-state h3 {
@@ -1326,9 +1506,30 @@ onMounted(async () => {
     flex-direction: column-reverse;
   }
   
-  .btn-primary,
-  .btn-secondary {
-    width: 100%;
+ .btn-danger, .btn-secondary {
+  margin: 0; /* Remove any default margins */
+  padding: var(--space-3) var(--space-6);
+  box-sizing: border-box; /* Ensure padding doesn't affect width */
+}
+  
+  .notification-overlay {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+  }
+  
+  .notification {
+    min-width: auto;
+    max-width: none;
+    padding: 14px 16px;
+  }
+  
+  .notification-title {
+    font-size: var(--font-size-xs);
+  }
+  
+  .notification-message {
+    font-size: var(--font-size-xs);
   }
 }
 
@@ -1338,8 +1539,10 @@ onMounted(async () => {
 .edit-profile-btn:focus,
 .btn-primary:focus,
 .btn-secondary:focus,
+.btn-danger:focus,
 .action-btn:focus,
-.like-btn:focus {
+.like-btn:focus,
+.notification-close:focus {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
 }
@@ -1347,6 +1550,7 @@ onMounted(async () => {
 @media (prefers-reduced-motion: reduce) {
   * {
     transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }
 </style>
