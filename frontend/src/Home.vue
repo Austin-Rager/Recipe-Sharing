@@ -167,7 +167,8 @@
           v-else-if="showProfile && isLoggedIn" 
           @go-home="goToHome" 
           @go-to-create="goToCreateRecipe"
-          @go-to-edit="handleEditRecipe"  
+          @go-to-edit="handleEditRecipe"
+          @go-to-recipe="openRecipe"
         />
 
        <MyRecipesPage 
