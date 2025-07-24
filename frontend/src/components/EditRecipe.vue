@@ -127,7 +127,7 @@
         <!-- Ingredients -->
         <div class="form-section">
           <h2 class="section-title">
-            <i data-lucide="shopping-list" class="section-icon"></i>
+            <i data-lucide="list-ordered" class="section-icon"></i>
             Ingredients
           </h2>
           

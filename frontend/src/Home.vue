@@ -387,6 +387,22 @@ import MyRecipesPage from './components/MyRecipes.vue';
 import Register from './components/Register.vue';
 import RecipeDetails from './components/RecipeDetails.vue';
 
+function handleRecipeUpdated(updatedRecipe) {
+  const recipeId = getRecipeId(updatedRecipe);
+  const index = apiRecipes.value.findIndex(r => getRecipeId(r) === recipeId);
+  if (index !== -1) {
+    apiRecipes.value[index] = convertBackendRecipe(updatedRecipe);
+  } else {
+    apiRecipes.value.unshift(convertBackendRecipe(updatedRecipe));
+  }
+
+  setTimeout(() => {
+    showNotification('success', `"${getRecipeTitle(updatedRecipe)}" has been updated successfully!`, 'Recipe Updated');
+  }, 100);
+
+  goToHome();
+}
+
 function reinitializeIcons() {
   setTimeout(() => {
     if (window.lucide) {
@@ -509,32 +525,39 @@ function hideNotification() {
 }
 
 const api = {
- async request(endpoint, options = {}) {
-   const url = `${API_BASE_URL}${endpoint}`;
-   const config = {
-     credentials: 'include',
-     headers: {
-       'Content-Type': 'application/json',
-       ...options.headers
-     },
-     ...options
-   };
+ 
+async function request(endpoint, options = {}) {
+  const url = `${API_BASE_URL}${endpoint}`;
+  const config = {
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    },
+    ...options
+  };
 
-   const response = await fetch(url, config);
-   
-   if (response.headers.get('content-type')?.includes('application/json')) {
-     const data = await response.json();
-     if (!response.ok) {
-       throw new Error(data.error || `HTTP ${response.status}`);
-     }
-     return data;
-   } else {
-     if (!response.ok) {
-       const text = await response.text();
-       throw new Error(text || `HTTP ${response.status}`);
-     }
-     return { success: true };
-   }
+  try {
+    const response = await fetch(url, config);
+    if (response.headers.get('content-type')?.includes('application/json')) {
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || data.message || `HTTP ${response.status}: Unknown error`);
+      }
+      return data;
+    } else {
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || `HTTP ${response.status}: Non-JSON response`);
+      }
+      return { success: true };
+    }
+  } catch (error) {
+    console.error(`Request failed for ${endpoint}:`, error);
+    throw error; // Re-throw to allow calling function to handle
+  }
+}
+
  },
 
  async getAllRecipes() {
@@ -567,10 +590,7 @@ const api = {
 };
 
 function convertBackendRecipe(backendRecipe) {
-  console.log('🔄 Converting backend recipe:', backendRecipe.name);
-  console.log('🔄 Backend images data:', backendRecipe.images);
-  console.log('🔄 Backend images length:', backendRecipe.images?.length);
-  
+
   return {
     id: backendRecipe._id,
     title: backendRecipe.name,
@@ -578,7 +598,6 @@ function convertBackendRecipe(backendRecipe) {
     image: backendRecipe.images?.length > 0 
       ? backendRecipe.images[0].url 
       : "https://www.svgrepo.com/show/9389/fork-plate-knife.svg",
-    // 🎯 FIX: Preserve the full images array for the gallery!
     images: backendRecipe.images || [],
     rating: backendRecipe.rating || 4.0,
     reviewCount: backendRecipe.likes || 0,
@@ -597,34 +616,35 @@ function closeError() {
 }
 
 function handleEditRecipe(recipe) {
-  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with ID:', recipe)
+  console.log('🚀 MAIN COMPONENT: handleEditRecipe called with ID:', recipe);
 
-  
-  const recipeId = recipe.id || recipe._id
-  
-  if (!recipeToEditData) {
-    console.error('Recipe not found in local data:', recipeId)
+  const recipeId = recipe.id || recipe._id;
+
+  // Check if the recipe exists in apiRecipes
+  const recipeExists = apiRecipes.value.find(r => getRecipeId(r) === recipeId);
+  if (!recipeExists) {
+    console.error('Recipe not found in local data:', recipeId);
     showNotification('error', 'Recipe not found. It may have been deleted.', 'Recipe Not Found');
-    return
+    return;
   }
-  
-  console.log('🚀 Using recipe ID:', recipeId)
-  
-  recipeToEdit.value = recipeId
-  showEditRecipe.value = true
-  showProfile.value = false
-  showLiked.value = false
-  showCreateRecipe.value = false
-  showLoginPage.value = false
-  showProfileMenu.value = false
-  
-  console.log('🚀 State after update:', { 
-    showEditRecipe: showEditRecipe.value, 
+
+  console.log('🚀 Using recipe ID:', recipeId);
+
+  recipeToEdit.value = recipeId; // Set the recipe ID for EditRecipePage
+  showEditRecipe.value = true;
+  showProfile.value = false;
+  showLiked.value = false;
+  showCreateRecipe.value = false;
+  showLoginPage.value = false;
+  showProfileMenu.value = false;
+
+  console.log('🚀 State after update:', {
+    showEditRecipe: showEditRecipe.value,
     showProfile: showProfile.value,
-    recipeToEdit: recipeToEdit.value 
-  })
-  
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+    recipeToEdit: recipeToEdit.value
+  });
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function parseTime(timeString) {
