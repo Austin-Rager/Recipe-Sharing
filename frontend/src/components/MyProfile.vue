@@ -238,7 +238,7 @@ import { ref, computed, onMounted } from 'vue'
 
 const API_BASE_URL = 'http://localhost:8080';
 
-const emit = defineEmits(['go-home', 'go-to-liked', 'go-to-create', 'go-to-edit'])
+const emit = defineEmits(['go-home', 'go-to-liked', 'go-to-create', 'go-to-edit', 'go-to-recipe'])
 
 const currentUser = ref({
   name: '',
@@ -551,6 +551,7 @@ function cancelEdit() {
 
 function openRecipe(recipe) {
   console.log('Opening recipe:', getRecipeTitle(recipe))
+  emit('go-to-recipe', recipe)
 }
 
 function editRecipe(recipe) {
