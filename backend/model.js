@@ -31,6 +31,22 @@ const AccountSchema = new mongoose.Schema({
             default: Date.now
         }
     }],
+    ratedRecipes: [{
+        recipeId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Recipe'
+        },
+        rating: {
+            type: Number,
+            required: true,
+            min: 1,
+            max: 5
+        },
+        ratedAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
     signupDate: {
         type: Date,
         default: Date.now
@@ -68,6 +84,12 @@ const RecipeSchema = new mongoose.Schema({
     rating:{
         type: Number,
         required:false,
+        default: 0
+    },
+    ratingCount: {
+        type: Number,
+        required: false,
+        default: 0
     },
     time:{
         type: String,

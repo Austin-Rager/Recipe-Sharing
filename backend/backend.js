@@ -366,6 +366,109 @@ app.delete("/recipe/:id/like", async (req, res) => {
     }
 });
 
+// Rate a recipe
+app.post("/recipe/:id/rate", async (req, res) => {
+    if (!req.session.session_username) {
+        return res.status(401).json({ error: "Must be logged in" });
+    }
+
+    try {
+        const recipeId = req.params.id;
+        const { rating } = req.body;
+        const username = req.session.session_username;
+
+        // Validate rating
+        if (!rating || rating < 1 || rating > 5 || !Number.isInteger(rating)) {
+            return res.status(400).json({ error: "Rating must be an integer between 1 and 5" });
+        }
+
+        const user = await Account.findOne({ username });
+        const recipe = await Recipe.findById(recipeId);
+
+        if (!recipe) {
+            return res.status(404).json({ error: "Recipe not found" });
+        }
+
+        // Check if user already rated this recipe
+        const existingRatingIndex = user.ratedRecipes.findIndex(
+            rating => rating.recipeId.toString() === recipeId
+        );
+
+        if (existingRatingIndex >= 0) {
+            // Update existing rating
+            user.ratedRecipes[existingRatingIndex].rating = rating;
+            user.ratedRecipes[existingRatingIndex].ratedAt = new Date();
+        } else {
+            // Add new rating
+            user.ratedRecipes.push({ recipeId, rating });
+        }
+
+        await user.save();
+
+        // Calculate new average rating for the recipe
+        const allUsers = await Account.find({ 
+            "ratedRecipes.recipeId": recipeId 
+        });
+        
+        let totalRating = 0;
+        let ratingCount = 0;
+        
+        allUsers.forEach(user => {
+            const userRating = user.ratedRecipes.find(
+                r => r.recipeId.toString() === recipeId
+            );
+            if (userRating) {
+                totalRating += userRating.rating;
+                ratingCount++;
+            }
+        });
+
+        const averageRating = ratingCount > 0 ? (totalRating / ratingCount) : 0;
+        
+        recipe.rating = Math.round(averageRating * 10) / 10; // Round to 1 decimal place
+        recipe.ratingCount = ratingCount;
+        await recipe.save();
+
+        res.json({ 
+            message: "Rating submitted", 
+            userRating: rating,
+            averageRating: recipe.rating,
+            ratingCount: recipe.ratingCount
+        });
+
+    } catch (error) {
+        console.error("Rating error:", error);
+        res.status(500).json({ error: "Failed to submit rating" });
+    }
+});
+
+// Get user's rating for a specific recipe
+app.get("/recipe/:id/rating", async (req, res) => {
+    if (!req.session.session_username) {
+        return res.status(401).json({ error: "Must be logged in" });
+    }
+
+    try {
+        const recipeId = req.params.id;
+        const username = req.session.session_username;
+
+        const user = await Account.findOne({ username });
+        
+        const userRating = user.ratedRecipes.find(
+            rating => rating.recipeId.toString() === recipeId
+        );
+
+        res.json({ 
+            rating: userRating ? userRating.rating : null,
+            ratedAt: userRating ? userRating.ratedAt : null
+        });
+
+    } catch (error) {
+        console.error("Get rating error:", error);
+        res.status(500).json({ error: "Failed to get rating" });
+    }
+});
+
 // Get user's liked recipes
 app.get("/user/liked-recipes", async (req, res) => {
     if (!req.session.session_username) {
