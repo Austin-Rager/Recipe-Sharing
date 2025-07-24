@@ -85,6 +85,7 @@
             <div class="rating">
               <span class="stars">{{ '★'.repeat(Math.floor(recipe.rating)) }}{{ '☆'.repeat(5 - Math.floor(recipe.rating)) }}</span>
               <span class="rating-text">{{ recipe.rating }}/5</span>
+              <span v-if="recipe.ratingCount > 0" class="rating-count">({{ recipe.ratingCount }} rating{{ recipe.ratingCount !== 1 ? 's' : '' }})</span>
             </div>
             <div class="difficulty">
               <span class="label">Difficulty:</span>
@@ -102,6 +103,29 @@
             <button class="btn btn-like" @click="likeRecipe">
               <span>{{ recipe.isLiked ? '❤️ Liked' : '🤍 Like' }}</span>
             </button>
+            
+            <!-- Interactive Rating Section -->
+            <div v-if="isLoggedIn" class="rating-section">
+              <span class="rating-label">Leave a rating:</span>
+              <div class="interactive-stars">
+                <button
+                  v-for="star in 5"
+                  :key="star"
+                  @click="submitRating(star)"
+                  @mouseover="hoverRating = star"
+                  @mouseleave="hoverRating = 0"
+                  :class="['star-btn', { 
+                    'filled': star <= (hoverRating || userRating || 0),
+                    'hover': star <= hoverRating
+                  }]"
+                  :disabled="isSubmittingRating"
+                >
+                  ★
+                </button>
+              </div>
+              <span v-if="userRating" class="user-rating-text">Your rating: {{ userRating }}/5</span>
+            </div>
+            
             <button v-if="isRecipeOwner" class="btn btn-edit" @click="editRecipe">
               <span>✏️ Edit</span> 
             </button>
@@ -276,12 +300,28 @@ const api = {
 
   async unlikeRecipe(id) {
     return this.request(`/recipe/${id}/like`, { method: 'DELETE' });
+  },
+
+  async rateRecipe(id, rating) {
+    return this.request(`/recipe/${id}/rate`, { 
+      method: 'POST',
+      body: JSON.stringify({ rating })
+    });
+  },
+
+  async getUserRating(id) {
+    return this.request(`/recipe/${id}/rating`);
   }
 };
 
 // User authentication state
 const isLoggedIn = ref(false);
 const currentUser = ref(null);
+
+// Rating system state
+const userRating = ref(0);
+const hoverRating = ref(0);
+const isSubmittingRating = ref(false);
 
 // Notification system
 const notification = ref({
@@ -298,6 +338,8 @@ const checkLoginStatus = async () => {
     const userInfo = await api.request('/me');
     isLoggedIn.value = true;
     currentUser.value = userInfo;
+    // Load user's rating for this recipe once logged in
+    await loadUserRating();
   } catch (error) {
     console.log('Not logged in:', error.message);
     isLoggedIn.value = false;
@@ -426,7 +468,8 @@ const recipe = computed(() => {
 
            (props.recipeData.images?.length > 0 ? props.recipeData.images[0].url : 'https://via.placeholder.com/400x300'),
     images: props.recipeData.images || [],
-    rating: props.recipeData.rating || 4.0,
+    rating: props.recipeData.rating || 0,
+    ratingCount: props.recipeData.ratingCount || 0,
     difficulty: props.recipeData.difficulty || 'Easy',
     time: props.recipeData.time || (props.recipeData.cookTime ? `${props.recipeData.cookTime}min` : '30 minutes'),
     isLiked: props.recipeData.isLiked || false,
@@ -475,6 +518,71 @@ const loadIngredientState = (recipeId) => {
 }
 
 
+
+// Rating functions
+const submitRating = async (rating) => {
+  if (!isLoggedIn.value) {
+    showNotification('warning', 'Please log in to rate recipes', 'Login Required');
+    return;
+  }
+
+  if (!recipe.value || !props.recipeData) return;
+
+  const recipeId = props.recipeData._id || props.recipeData.id;
+  
+  if (!recipeId || typeof recipeId !== 'string' || recipeId.length !== 24) {
+    console.error('Invalid recipe ID:', recipeId);
+    showNotification('error', 'Invalid recipe ID. Cannot rate this recipe.', 'Error');
+    return;
+  }
+
+  isSubmittingRating.value = true;
+
+  try {
+    const response = await api.rateRecipe(recipeId, rating);
+    userRating.value = rating;
+    showNotification('success', `You rated "${getRecipeTitle(recipe.value)}" ${rating} star${rating > 1 ? 's' : ''}!`, 'Rating Submitted');
+    
+    // Update the recipe's overall rating display with response data
+    if (response.averageRating !== undefined) {
+      recipe.value.rating = response.averageRating;
+      recipe.value.ratingCount = response.ratingCount;
+      // Also update the original props data so it persists
+      if (props.recipeData) {
+        props.recipeData.rating = response.averageRating;
+        props.recipeData.ratingCount = response.ratingCount;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to submit rating:', error);
+    showNotification('error', 'Failed to submit rating. Please try again.', 'Rating Error');
+  } finally {
+    isSubmittingRating.value = false;
+  }
+};
+
+const loadUserRating = async () => {
+  if (!isLoggedIn.value || !props.recipeData) return;
+
+  const recipeId = props.recipeData._id || props.recipeData.id;
+  
+  if (!recipeId || typeof recipeId !== 'string' || recipeId.length !== 24) {
+    return;
+  }
+
+  try {
+    const response = await api.getUserRating(recipeId);
+    userRating.value = response.rating || 0;
+  } catch (error) {
+    // User hasn't rated this recipe yet, which is fine
+    userRating.value = 0;
+  }
+};
+
+const loadRecipeRating = async () => {
+  // This will be implemented when we add the backend endpoint to get overall recipe rating
+  // For now, we'll keep the existing static rating display
+};
 
 // Methods
 const likeRecipe = async () => {
@@ -1434,6 +1542,13 @@ onUnmounted(() => {
   font-size: var(--font-size-base);
 }
 
+.rating-count {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-left: var(--space-2);
+}
+
 .difficulty, .time {
   display: flex;
   align-items: center;
@@ -1457,7 +1572,9 @@ onUnmounted(() => {
 
 .action-buttons {
   display: flex;
-  gap: var(--space-4);
+  align-items: center;
+  gap: var(--space-6);
+  flex-wrap: wrap;
 }
 
 .btn {
@@ -1515,6 +1632,71 @@ onUnmounted(() => {
 .btn-home:hover {
   background: var(--background-tertiary);
   color: var(--text-primary);
+}
+
+/* ===== INTERACTIVE RATING STYLES ===== */
+.rating-section {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--background-secondary);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--background-tertiary);
+}
+
+.rating-label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.interactive-stars {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.star-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--background-tertiary);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  line-height: 1;
+  user-select: none;
+  transform: scale(1);
+}
+
+.star-btn:hover:not(:disabled) {
+  transform: scale(1.1);
+  color: #fbbf24;
+}
+
+.star-btn.filled {
+  color: #fbbf24;
+}
+
+.star-btn.hover {
+  color: #f59e0b;
+  transform: scale(1.1);
+}
+
+.star-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.user-rating-text {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+  margin-left: var(--space-2);
 }
 
 .recipe-content {
@@ -2135,6 +2317,20 @@ onUnmounted(() => {
   .btn {
     flex: 1;
     min-width: 120px;
+  }
+  
+  .rating-section {
+    order: -1;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .rating-label {
+    font-size: var(--font-size-xs);
+  }
+  
+  .star-btn {
+    font-size: 18px;
   }
 }
 
