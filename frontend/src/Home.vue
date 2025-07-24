@@ -589,24 +589,28 @@ async request(endpoint, options = {}) {
  }
 };
 
+// In Home.vue or a shared utility
 function convertBackendRecipe(backendRecipe) {
-
+  if (!backendRecipe || !backendRecipe._id) {
+    console.warn('Received invalid recipe in convertBackendRecipe:', backendRecipe);
+    return null; // Skip invalid recipes
+  }
   return {
     id: backendRecipe._id,
-    title: backendRecipe.name,
-    description: backendRecipe.description || "Delicious recipe",
-    image: backendRecipe.images?.length > 0 
-      ? backendRecipe.images[0].url 
-      : "https://www.svgrepo.com/show/9389/fork-plate-knife.svg",
+    title: backendRecipe.name || 'Untitled Recipe',
+    description: backendRecipe.description || 'No description',
+    image: backendRecipe.images?.length > 0
+      ? backendRecipe.images[0].url
+      : 'https://www.svgrepo.com/show/9389/fork-plate-knife.svg',
     images: backendRecipe.images || [],
     rating: backendRecipe.rating || 4.0,
     reviewCount: backendRecipe.likes || 0,
-    cookTime: parseTime(backendRecipe.time),
-    difficulty: mapDifficulty(backendRecipe.difficulty),
-    isLiked: false, 
-    creator: backendRecipe.creator,
-    ingredients: backendRecipe.ingredients,
-    instructions: backendRecipe.instructions,
+    cookTime: backendRecipe.time || 'Unknown',
+    difficulty: backendRecipe.difficulty || 1,
+    isLiked: true, // Assume liked for /user/liked-recipes
+    creator: backendRecipe.creator || {},
+    ingredients: backendRecipe.ingredients || [],
+    instructions: backendRecipe.instructions || [],
     _original: backendRecipe
   };
 }
@@ -798,47 +802,71 @@ const isSearchActive = computed(() => {
  return activeSearchQuery.value.trim() !== '';
 });
 
+
+
 async function checkAuthStatus() {
  try {
+   // First, get all recipes (this works for both logged in and not logged in users)
    const response = await api.getAllRecipes();
    apiRecipes.value = response.recipes.map(convertBackendRecipe);
    
+   // Then, check if user is logged in by trying to get user info
    try {
-     const likedResponse = await api.getLikedRecipes();
-     const likedIds = new Set(likedResponse.likedRecipes.map(r => r._id));
-     likedRecipeIds.value = likedIds;
-     
-     apiRecipes.value.forEach(recipe => {
-       recipe.isLiked = likedIds.has(recipe.id);
-     });
-     
-     isLoggedIn.value = true;
-     
-     try {
-       const userInfo = await api.getUserInfo();
+     const userInfo = await api.getUserInfo();
+     if (userInfo && userInfo._id) {
+       // User is logged in
        currentUser.value = userInfo;
+       isLoggedIn.value = true;
        console.log('User logged in:', userInfo);
-     } catch (error) {
-       console.error('Failed to get user info:', error);
-       currentUser.value = { username: 'User', name: 'User', email: 'user@example.com' };
+       
+       // Now that we know user is logged in, get their liked recipes
+       try {
+         const likedResponse = await api.getLikedRecipes();
+         const likedIds = new Set(likedResponse.likedRecipes.map(r => r._id));
+         likedRecipeIds.value = likedIds;
+         
+         // Update recipe like status
+         apiRecipes.value.forEach(recipe => {
+           recipe.isLiked = likedIds.has(recipe.id);
+         });
+         
+       } catch (likedError) {
+         console.log('Failed to get liked recipes:', likedError.message);
+         likedRecipeIds.value = new Set();
+       }
+       
+     } else {
+       // User info incomplete
+       isLoggedIn.value = false;
+       currentUser.value = null;
+       likedRecipeIds.value = new Set();
      }
      
    } catch (error) {
+     // User is not logged in
      console.log('Not logged in:', error.message);
      isLoggedIn.value = false;
      currentUser.value = null;
+     likedRecipeIds.value = new Set();
    }
    
    apiError.value = '';
+   
  } catch (error) {
    console.error('Failed to load recipes:', error);
    apiError.value = error.message;
    apiRecipes.value = [];
+   isLoggedIn.value = false;
+   currentUser.value = null;
+   likedRecipeIds.value = new Set();
+   
  } finally {
    isLoadingInitial.value = false;
    reinitializeIcons();
  }
 }
+
+   
 
 async function retryConnection() {
  isLoadingInitial.value = true;
@@ -1009,25 +1037,30 @@ async function handleLoginFromRegister(userData) {
  isLoggedIn.value = true;
  showLoginPage.value = false;
  
+ let userDisplayName = 'User'; // Default fallback
+ 
  try {
    const userInfo = await api.getUserInfo();
    currentUser.value = userInfo;
    console.log('Got user info:', userInfo);
+   userDisplayName = userInfo?.name || userInfo?.username || 'User';
  } catch (error) {
    console.error('Failed to get user info:', error);
+   // Create fallback user object
    currentUser.value = {
-     username: userData.username,
-     name: userData.username,
-     email: 'user@example.com'
+     username: userData?.username || 'User',
+     name: userData?.username || 'User',
+     email: userData?.email || 'user@example.com'
    };
+   userDisplayName = currentUser.value.name;
  }
  
  checkAuthStatus();
- 
  reinitializeIcons();
  
+ // Use the safely extracted display name
  setTimeout(() => {
-   showNotification('success', `Welcome back, ${currentUser.value.name || currentUser.value.username}!`, 'Login Successful');
+   showNotification('success', `Welcome back, ${userDisplayName}!`, 'Login Successful');
  }, 500);
 }
 
