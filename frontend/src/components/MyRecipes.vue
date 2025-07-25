@@ -6,7 +6,8 @@ const emit = defineEmits(['go-home', 'recipe-selected']);
 // API function to fetch user's recipes
 async function fetchUserRecipes() {
     try {
-    const response = await fetch('http://localhost:8080/users-recipes', {
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+    const response = await fetch(`${API_BASE_URL}/users-recipes`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -37,7 +38,7 @@ async function fetchUserRecipes() {
 // Delete a recipe
 async function deleteRecipe(recipeId) {
   try {
-    const response = await fetch(`http://localhost:8080/recipe/${recipeId}`, {
+    const response = await fetch(`${API_BASE_URL}/recipe/${recipeId}`, {
       method: 'DELETE',
       credentials: 'include'
     });

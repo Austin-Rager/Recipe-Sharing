@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, defineProps, defineEmits } from 'vue'
 
-const URL = "http://localhost:8080";
+const URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 const props = defineProps({
   showBackButton: {

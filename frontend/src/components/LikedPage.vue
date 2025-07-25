@@ -122,7 +122,7 @@ export default {
   name: 'LikedPage',
   emits: ['go-home', 'open-recipe'],
   setup(props, { emit }) {
-    const API_BASE_URL = 'http://localhost:8080';
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
     
     const likedRecipes = ref([])
     const loading = ref(true)
