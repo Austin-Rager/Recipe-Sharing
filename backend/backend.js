@@ -37,10 +37,10 @@ app.use(
         resave: false,
         saveUninitialized: false,
         cookie: {
-            secure: process.env.NODE_ENV === 'production',
+            secure: false, // Set to false for development
             maxAge: 24 * 60 * 60 * 1000, // 24 hours
             httpOnly: true,
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // Add this line
+            sameSite: 'lax' // Use 'lax' for same-origin requests
         }
     })
 );
