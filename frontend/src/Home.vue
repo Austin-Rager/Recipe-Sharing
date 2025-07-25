@@ -1024,20 +1024,30 @@ function goBackToHome() {
  reinitializeIcons();
 }
 
-async function handleLoginFromRegister(userData) {
+ async function handleLoginFromRegister(userData) {
  isLoggedIn.value = true;
  showLoginPage.value = false;
  
- let userDisplayName = 'User'; // Default fallback
+ let userDisplayName = 'User';
  
  try {
    const userInfo = await api.getUserInfo();
    currentUser.value = userInfo;
    console.log('Got user info:', userInfo);
    userDisplayName = userInfo?.name || userInfo?.username || 'User';
+   
+   // Get liked recipes without running full checkAuthStatus
+   try {
+     const likedResponse = await api.getLikedRecipes();
+     const likedIds = new Set(likedResponse.likedRecipes.map(r => r._id));
+     likedRecipeIds.value = likedIds;
+   } catch (likedError) {
+     console.log('Failed to get liked recipes:', likedError.message);
+     likedRecipeIds.value = new Set();
+   }
+   
  } catch (error) {
    console.error('Failed to get user info:', error);
-   // Create fallback user object
    currentUser.value = {
      username: userData?.username || 'User',
      name: userData?.username || 'User',
@@ -1046,10 +1056,9 @@ async function handleLoginFromRegister(userData) {
    userDisplayName = currentUser.value.name;
  }
  
- checkAuthStatus();
+ // DON'T call checkAuthStatus() here - it's causing the logout
  reinitializeIcons();
  
- // Use the safely extracted display name
  setTimeout(() => {
    showNotification('success', `Welcome back, ${userDisplayName}!`, 'Login Successful');
  }, 500);
