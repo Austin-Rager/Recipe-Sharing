@@ -27,7 +27,8 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173', 
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200
 }));
 app.use(express.json());
 
@@ -40,7 +41,8 @@ app.use(
             secure: false, // Set to false for development
             maxAge: 24 * 60 * 60 * 1000, // 24 hours
             httpOnly: true,
-            sameSite: 'lax' // Use 'lax' for same-origin requests
+            sameSite: 'lax', // Use 'lax' for same-origin requests
+            domain: undefined // Don't set domain for localhost
         }
     })
 );
