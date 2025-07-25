@@ -292,6 +292,7 @@ app.post("/recipe", createRecipeLimiter, upload.array('images', 5), async (req, 
 });
 
 // Like a recipe
+// Like/Unlike a recipe (toggle)
 app.post("/recipe/:id/like", async (req, res) => {
     if (!req.session.session_username) {
         return res.status(401).json({ error: "Must be logged in" });
@@ -313,26 +314,40 @@ app.post("/recipe/:id/like", async (req, res) => {
         );
 
         if (alreadyLiked) {
-            return res.status(400).json({ error: "Already liked this recipe" });
+            // UNLIKE the recipe
+            user.likedRecipes = user.likedRecipes.filter(
+                like => like.recipeId.toString() !== recipeId
+            );
+            await user.save();
+
+            recipe.likes = Math.max((recipe.likes || 0) - 1, 0);
+            await recipe.save();
+
+            res.json({ 
+                message: "Recipe unliked", 
+                likes: recipe.likes,
+                liked: false 
+            });
+        } else {
+            // LIKE the recipe
+            user.likedRecipes.push({ recipeId });
+            await user.save();
+
+            recipe.likes = (recipe.likes || 0) + 1;
+            await recipe.save();
+
+            res.json({ 
+                message: "Recipe liked", 
+                likes: recipe.likes,
+                liked: true 
+            });
         }
 
-        user.likedRecipes.push({ recipeId });
-        await user.save();
-
-        recipe.likes = (recipe.likes || 0) + 1;
-        await recipe.save();
-
-        res.json({ 
-            message: "Recipe liked", 
-            likes: recipe.likes 
-        });
-
     } catch (error) {
-        console.error("Like error:", error);
-        res.status(500).json({ error: "Failed to like recipe" });
+        console.error("Like/Unlike error:", error);
+        res.status(500).json({ error: "Failed to toggle like" });
     }
 });
-
 
 // Unlike a recipe
 app.delete("/recipe/:id/like", async (req, res) => {
@@ -698,6 +713,7 @@ app.get("/me", async (req, res) => {
         }
 
         res.json({
+            _id: user._id,  
             username: user.username,
             name: user.name,
             email: user.email,

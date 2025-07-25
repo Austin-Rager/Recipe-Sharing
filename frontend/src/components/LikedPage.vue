@@ -169,25 +169,36 @@ export default {
     };
 
     function convertBackendRecipe(backendRecipe) {
-      return {
-        id: backendRecipe._id,
-        title: backendRecipe.name,
-        description: backendRecipe.description || "Delicious recipe",
-        image: backendRecipe.images?.length > 0 
-          ? backendRecipe.images[0].url 
-          : "https://www.svgrepo.com/show/9389/fork-plate-knife.svg",
-        rating: backendRecipe.rating || 4.0,
-        reviewCount: backendRecipe.likes || 0,
-        cookTime: parseTime(backendRecipe.time),
-        difficulty: mapDifficulty(backendRecipe.difficulty),
-        isLiked: true, 
-        creator: backendRecipe.creator,
-        ingredients: backendRecipe.ingredients,
-        instructions: backendRecipe.instructions,
-        likedAt: new Date(), 
-        _original: backendRecipe
-      };
-    }
+
+  if (!backendRecipe) {
+    console.warn('convertBackendRecipe received null/undefined recipe:', backendRecipe);
+    return null;
+  }
+
+  if (!backendRecipe._id) {
+    console.warn('Recipe missing _id field:', backendRecipe);
+    return null;
+  }
+
+  return {
+    id: backendRecipe._id,
+    title: backendRecipe.name,
+    description: backendRecipe.description || "Delicious recipe",
+    image: backendRecipe.images?.length > 0 
+      ? backendRecipe.images[0].url 
+      : "https://www.svgrepo.com/show/9389/fork-plate-knife.svg",
+    rating: backendRecipe.rating || 4.0,
+    reviewCount: backendRecipe.likes || 0,
+    cookTime: parseTime(backendRecipe.time),
+    difficulty: mapDifficulty(backendRecipe.difficulty),
+    isLiked: true, 
+    creator: backendRecipe.creator,
+    ingredients: backendRecipe.ingredients,
+    instructions: backendRecipe.instructions,
+    likedAt: new Date(), 
+    _original: backendRecipe
+  };
+}
 
     function parseTime(timeString) {
       if (!timeString) return 30;
@@ -263,7 +274,12 @@ export default {
       try {
         loading.value = true 
         const response = await api.getLikedRecipes();
-        likedRecipes.value = response.likedRecipes.map(convertBackendRecipe);
+
+        likedRecipes.value = response.likedRecipes
+        .filter(recipe => recipe !== null && recipe !== undefined) // Filter out null/undefined first
+        .map(convertBackendRecipe)
+        .filter(recipe => recipe !== null); 
+
         console.log('Loaded liked recipes:', likedRecipes.value.length);
         reinitializeIcons();
       } catch (error) {
