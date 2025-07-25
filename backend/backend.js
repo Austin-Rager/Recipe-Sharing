@@ -45,6 +45,8 @@ app.use(
     })
 );
 
+console.log("Session secret exists:", !!process.env.SESSION_SECRET);
+
 // Configure AWS S3
 AWS.config.update({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -162,6 +164,8 @@ app.post("/login", async(req,res) =>{
             const isValidPassword = await bcrypt.compare(data.password, result.password);
             if (isValidPassword) {
                 req.session.session_username = data.username;
+                console.log("Login successful, session set:", req.session.session_username);
+                console.log("Session ID:", req.sessionID);
                 res.status(200).json({username: data.username});
                 return;
             }
@@ -700,6 +704,10 @@ app.use((error, req, res, next) => {
 
 // /me endpoint to get current user info
 app.get("/me", async (req, res) => {
+    console.log("Session ID in /me:", req.sessionID);
+    console.log("Session data in /me:", req.session);
+    console.log("Session username:", req.session.session_username);
+    
     if (!req.session.session_username) {
         return res.status(401).json({ error: "Not logged in" });
     }
